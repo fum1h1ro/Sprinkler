@@ -24,6 +24,8 @@ namespace Sprinkler.Components
             Finished,
         }
 
+        public float Wait = 0.025f;
+
         private TMProPlus _plus;
         private State _state;
         private float _defaultWait;
@@ -44,24 +46,11 @@ namespace Sprinkler.Components
             _plus = GetComponent<TMProPlus>();
         }
 
-        private void OnEnable()
-        {
-            //SetText(_plus.TaggedText, true);
-        }
-
         private void Update()
         {
             if (_state == State.Playing) StreamUpdate();
             _quaker.Update();
             if (_plus.Info.characterCount > 0) MeshUpdate();
-        }
-
-        private void OnDisable()
-        {
-        }
-
-        private void OnDestroy()
-        {
         }
 
         private void StreamUpdate()
@@ -133,6 +122,7 @@ namespace Sprinkler.Components
         public void SetText(string text, bool autoPlay=false)
         {
             Clear();
+            _plus.TaggedText = text;
             _plus.SetText(text);
             _state = State.Set;
             if (autoPlay) Play();
@@ -151,7 +141,7 @@ namespace Sprinkler.Components
         public void Clear()
         {
             _cursor = 0;
-            _defaultWait = 0.05f;
+            _defaultWait = Wait;
             _wait = 0.0f;
             _plus.Text.maxVisibleCharacters = 0;
             _state = State.Empty;
@@ -240,7 +230,4 @@ namespace Sprinkler.Components
             }
         }
     }
-
-
-
 }

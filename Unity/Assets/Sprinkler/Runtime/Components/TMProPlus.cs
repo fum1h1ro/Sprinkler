@@ -44,36 +44,6 @@ namespace Sprinkler.Components
             {
                 SetText(TaggedText);
             }
-
-#if false
-            Profiler.BeginSample("MSG:SetText");
-            SetText("ほげ<quake>ほげ</quake>");
-            Profiler.EndSample();
-
-            var tag = new TagParser();
-            Profiler.BeginSample("MSG:TagParser");
-            tag.Parse("<tag>");
-            Profiler.EndSample();
-
-            var s = new ReadOnlySpan("HOGE", 0, 2);
-            Profiler.BeginSample("MSG:ReadOnlySpan");
-            foreach (var c in s)
-                ;
-            Profiler.EndSample();
-
-
-            var ts = new TextSplitter("HOge hoge hoge ", ' ');
-            Profiler.BeginSample("MSG:TextSplitter");
-            foreach (var t in ts)
-                ;
-            Profiler.EndSample();
-
-            var lex = new Lexer("HOge<aaaa>hoge hoge ");
-            Profiler.BeginSample("MSG:Lexer");
-            foreach (var l in lex)
-                ;
-            Profiler.EndSample();
-#endif
         }
 
         private void OnDisable()
@@ -85,9 +55,8 @@ namespace Sprinkler.Components
             _proc.Dispose();
         }
 
-        public void SetText(string text)
+        internal void SetText(string text)
         {
-            Clear();
             try {
                 _proc.SetText(text);
             }
@@ -98,10 +67,6 @@ namespace Sprinkler.Components
             _text.SetCharArray(_proc.ToArray(), 0, _proc.Length);
             _text.ForceMeshUpdate();
             _prevText = text;
-        }
-
-        public void Clear()
-        {
         }
     }
 }
