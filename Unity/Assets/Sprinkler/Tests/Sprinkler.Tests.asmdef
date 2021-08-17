@@ -1,0 +1,19 @@
+{
+    "name": "Sprinkler.Tests",
+    "rootNamespace": "",
+    "references": [
+        "GUID:9f6dd29b6e15d4cc4b442ad2d871de40",
+        "GUID:0acc523941302664db1f4e527237feb3"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

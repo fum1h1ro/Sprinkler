@@ -1,0 +1,16 @@
+{
+  "name": "dev.fum1h1ro.sprinkler",
+  "displayName": "Sprinkler",
+  "version": "0.1.0",
+  "unity": "2020.3",
+  "description": "Additional feature for TextMeshPro",
+  "documentationUrl": "https://github.com/fum1h1ro/Sprinkler",
+  "dependencies": {
+  },
+  "author": {
+    "name": "fum1h1ro",
+    "email": "fumihiro@gmail.com",
+    "url": "https://fum1h1ro.github.io/"
+  },
+  "type": "library"
+}
