@@ -92,6 +92,7 @@ namespace Sprinkler
             _buffer.Clear();
             _attrs.Clear();
             _currentFlag = AnimFlag.Normal;
+            _openedTags.Clear();
 
             foreach (var span in lex)
             {
