@@ -70,14 +70,18 @@ namespace Sprinkler.Components
 
         internal void SetText(string text)
         {
-            try {
+            try
+            {
                 _proc.SetText(text);
             }
             catch (Exception e)
             {
                 Debug.LogError($"{e}");
             }
+            var bak = _text.enabled;
+            if (bak) _text.enabled = false;
             _text.SetCharArray(_proc.ToArray(), 0, _proc.Length);
+            _text.enabled = bak;
             _text.ForceMeshUpdate();
             _prevText = text;
         }
