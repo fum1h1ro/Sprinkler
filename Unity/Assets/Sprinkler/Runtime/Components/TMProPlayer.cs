@@ -16,12 +16,10 @@ namespace Sprinkler.Components
     {
         private enum State
         {
-            Empty,
-            Set,
-            Playing,
-            Pause,
-            Waiting,
-            Finished,
+            Empty, // なんもない
+            Playing, // 再生中
+            Paused, // 再生停止中
+            Finished, // 再生が終わった
         }
 
         public float Wait = 0.025f;
@@ -57,7 +55,7 @@ namespace Sprinkler.Components
         {
             if (_cursor >= _plus.Commands.Count)
             {
-                _state = State.Waiting;
+                _state = State.Finished;
                 return;
             }
 
@@ -114,9 +112,9 @@ namespace Sprinkler.Components
             }
         }
 
-        public bool IsStreaming => (IsPlaying || IsWaiting) && !IsFinished;
-        public bool IsPlaying => _state == State.Set || _state == State.Playing || _state == State.Pause;
-        public bool IsWaiting => _state == State.Waiting;
+        public bool IsStreaming => (IsPlaying || IsPaused) && !IsFinished;
+        public bool IsPlaying => _state == State.Playing;
+        public bool IsPaused => _state == State.Paused;
         public bool IsFinished => _state == State.Finished;
 
         public void SetText(string text, bool autoPlay=false)
@@ -124,18 +122,18 @@ namespace Sprinkler.Components
             Clear();
             _plus.TaggedText = text;
             _plus.SetText(text);
-            _state = State.Set;
+            _state = State.Paused;
             if (autoPlay) Play();
         }
 
         public void Play()
         {
-            if (_state == State.Set || _state == State.Pause) _state = State.Playing;
+            if (_state == State.Paused) _state = State.Playing;
         }
 
         public void Pause()
         {
-            if (_state == State.Set || _state == State.Playing) _state = State.Pause;
+            if (_state == State.Playing) _state = State.Paused;
         }
 
         public void Clear()
@@ -147,29 +145,10 @@ namespace Sprinkler.Components
             _state = State.Empty;
         }
 
-        public void SkipAll(bool nowait)
+        public void SkipAll()
         {
             _plus.Text.maxVisibleCharacters = _plus.Info.characterCount;
-            if (nowait)
-            {
-                _state = State.Finished;
-            }
-            else
-            {
-                _state = State.Waiting;
-            }
-        }
-
-        public void GoAhead()
-        {
-            if (IsPlaying)
-            {
-                SkipAll(false);
-            }
-            else if (_state == State.Waiting)
-            {
-                _state = State.Finished;
-            }
+            if (IsPlaying || IsPaused) _state = State.Finished;
         }
 
         private interface IVertexModifier
