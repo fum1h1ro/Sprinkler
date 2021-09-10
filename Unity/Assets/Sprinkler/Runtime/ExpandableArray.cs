@@ -57,6 +57,12 @@ namespace Sprinkler
                 Assert.IsTrue(idx < _length);
                 return _array[idx];
             }
+            set
+            {
+                Assert.IsTrue(0 <= idx);
+                Assert.IsTrue(idx < _length);
+                _array[idx] = value;
+            }
         }
     }
 

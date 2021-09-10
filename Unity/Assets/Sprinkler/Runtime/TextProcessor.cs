@@ -10,8 +10,8 @@ namespace Sprinkler
 {
     public class TextProcessor : IDisposable
     {
-        public const char TagOpenChar = '<';
-        public const char TagCloseChar = '>';
+        public const char TagStartChar = '<';
+        public const char TagEndChar = '>';
 
         public enum CommandType
         {
@@ -19,12 +19,11 @@ namespace Sprinkler
             Wait,
         }
 
-        [System.Flags]
-        public enum AnimFlag
+        public enum AnimType : sbyte
         {
-            Normal = 0,
-            Quake = (1<<0),
-            Wave = (1<<1),
+            Normal,
+            Quake,
+            Shout,
         }
 
         [StructLayout(LayoutKind.Explicit)]
@@ -35,9 +34,26 @@ namespace Sprinkler
             [FieldOffset(4)] public float Wait;
         }
 
-        public struct Attr
+        public struct CharAttribute
         {
-            public AnimFlag Flag;
+            public AnimType AnimType;
+        }
+
+        [StructLayout(LayoutKind.Explicit)]
+        public struct CharParameter
+        {
+            public struct QuakeParam
+            {
+                public float Time;
+            }
+
+            public struct ShoutParam
+            {
+                public float Time;
+            }
+
+            [FieldOffset(0)] public QuakeParam Quake;
+            [FieldOffset(0)] public ShoutParam Shout;
         }
 
         public struct TagParam
@@ -47,17 +63,19 @@ namespace Sprinkler
         }
 
         private readonly TMP_Text _text;
-        private AnimFlag _currentFlag;
+        private AnimType _currentAnim;
         private TagParser _tag = new TagParser();
         private List<Command> _commands = new List<Command>();
         private ExpandableCharArray _buffer = new ExpandableCharArray(128);
-        private ExpandableArray<Attr> _attrs = new ExpandableArray<Attr>(128);
+        private ExpandableArray<CharAttribute> _attrs = new ExpandableArray<CharAttribute>(128);
+        private ExpandableArray<CharParameter> _params = new ExpandableArray<CharParameter>(128);
         private Dictionary<string, TagParam> _openedTags = new Dictionary<string, TagParam>();
 
         public int Length => _buffer.Length;
         public char[] ToArray() => _buffer.Array;
         public List<Command> Commands => _commands;
-        public ExpandableArray<Attr> Attributes => _attrs;
+        public ExpandableArray<CharAttribute> Attributes => _attrs;
+        public ExpandableArray<CharParameter> Parameters => _params;
 
         public TextProcessor(TMP_Text tmptext)
         {
@@ -74,15 +92,20 @@ namespace Sprinkler
             Parse(t);
         }
 
-        private void AddChar(char c)
+        private void AddChar(char c, bool isVisible)
         {
+            //Debug.Log($"{_currentAnim}");
             _buffer.Add(c);
-            _attrs.Add(new Attr{ Flag = _currentFlag });
+            if (isVisible)
+            {
+                _attrs.Add(new CharAttribute{ AnimType = _currentAnim });
+                _params.Add(new CharParameter());
+            }
         }
 
-        private void AddString(string s)
+        private void AddString(string s, bool isVisible)
         {
-            foreach (var c in s) AddChar(c);
+            foreach (var c in s) AddChar(c, isVisible);
         }
 
         private void Parse(string src)
@@ -91,12 +114,14 @@ namespace Sprinkler
             _commands.Clear();
             _buffer.Clear();
             _attrs.Clear();
-            _currentFlag = AnimFlag.Normal;
+            _params.Clear();
+            _currentAnim = AnimType.Normal;
             _openedTags.Clear();
 
             foreach (var span in lex)
             {
-                if (span[0] == TagOpenChar)
+                //Debug.Log($"{span.ToString()}");
+                if (span[0] == TagStartChar)
                 {
                     _tag.Parse(span);
 
@@ -114,7 +139,7 @@ namespace Sprinkler
                     for (int i = 0; i < span.Length; ++i)
                     {
                         _commands.Add(new Command{ Type = CommandType.Put, Count = 1 });
-                        AddChar(span[i]);
+                        AddChar(span[i], true);
                     }
                 }
             }
@@ -134,7 +159,14 @@ namespace Sprinkler
             }
             if (_tag.Name.Equals("quake"))
             {
-                _currentFlag |= AnimFlag.Quake;
+                Assert.AreEqual(_currentAnim, AnimType.Normal);
+                _currentAnim = AnimType.Quake;
+                return;
+            }
+            if (_tag.Name.Equals("shout"))
+            {
+                Assert.AreEqual(_currentAnim, AnimType.Normal);
+                _currentAnim = AnimType.Shout;
                 return;
             }
             if (_tag.Name.Equals("ruby"))
@@ -146,7 +178,7 @@ namespace Sprinkler
 
             foreach (var s in span)
             {
-                AddChar(s);
+                AddChar(s, false);
             }
         }
 
@@ -154,8 +186,16 @@ namespace Sprinkler
         {
             if (_tag.Name.Equals("quake"))
             {
-                Assert.IsTrue(_openedTags.ContainsKey("quake"));
-                _currentFlag &= ~AnimFlag.Quake;
+                //Assert.IsTrue(_openedTags.ContainsKey("quake"));
+                Assert.AreEqual(_currentAnim, AnimType.Quake);
+                _currentAnim = AnimType.Normal;
+                return;
+            }
+            if (_tag.Name.Equals("shout"))
+            {
+                //Assert.IsTrue(_openedTags.ContainsKey("quake"));
+                Assert.AreEqual(_currentAnim, AnimType.Shout);
+                _currentAnim = AnimType.Normal;
                 return;
             }
             if (_tag.Name.Equals("ruby"))
@@ -170,7 +210,11 @@ namespace Sprinkler
                 var prefix = (bodySize.x < rubySize.x)? (rubySize.x - bodySize.x) * 0.5f : 0;
                 var offset0 = -(bodySize.x + rubySize.x) * 0.5f;
                 var offset1 = (-rubySize.x + bodySize.x) * 0.5f + prefix;
-                AddString($"<space={prefix}>{body}<space={offset0}><voffset=1em><size=50%>{ruby}</size></voffset><space={offset1}>");
+                AddString($"<space={prefix}>", false);
+                AddString(body, true);
+                AddString($"<space={offset0}><voffset=1em><size=50%>", false);
+                AddString(ruby, true);
+                AddString($"</size></voffset><space={offset1}>", false);
 
                 for (int i = 0; i < body.Length - 1; ++i)
                 {
@@ -184,7 +228,7 @@ namespace Sprinkler
 
             foreach (var s in span)
             {
-                AddChar(s);
+                AddChar(s, false);
             }
         }
     }

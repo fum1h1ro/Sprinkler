@@ -30,7 +30,6 @@ namespace Sprinkler.Components
         private float _wait;
         private int _cursor;
 
-        private Quaker _quaker = new Quaker();
 
         public static TMProPlayer GetOrAdd(GameObject g)
         {
@@ -47,8 +46,6 @@ namespace Sprinkler.Components
         private void Update()
         {
             if (_state == State.Playing) StreamUpdate();
-            _quaker.Update();
-            if (_plus.Info.characterCount > 0) MeshUpdate();
         }
 
         private void StreamUpdate()
@@ -76,39 +73,6 @@ namespace Sprinkler.Components
             case TextProcessor.CommandType.Wait:
                 _wait = cmd.Wait;
                 break;
-            }
-        }
-
-        private void MeshUpdate()
-        {
-            _plus.Text.ForceMeshUpdate();
-            var attrs = _plus.Attributes;
-            //if (!attrs.IsCreated) return;
-
-            for (int i = 0; i < _plus.Info.characterCount; ++i)
-            {
-                var attr = attrs[i];
-                var charInfo = _plus.Info.characterInfo[i];
-
-                if (!charInfo.isVisible) continue;
-
-                int materialIndex = charInfo.materialReferenceIndex;
-                int vertexIndex = charInfo.vertexIndex;
-
-
-                var vertices = _plus.Info.meshInfo[materialIndex].vertices;
-
-                if ((attr.Flag & TextProcessor.AnimFlag.Quake) != 0)
-                {
-                    _quaker.Modify(i, charInfo, vertices, vertexIndex);
-                }
-            }
-
-            for (int i = 0; i < _plus.Info.meshInfo.Length; ++i)
-            {
-                var meshInfo = _plus.Info.meshInfo[i];
-                meshInfo.mesh.vertices = meshInfo.vertices;
-                _plus.Text.UpdateGeometry(meshInfo.mesh, i);
             }
         }
 
@@ -149,64 +113,6 @@ namespace Sprinkler.Components
         {
             _plus.Text.maxVisibleCharacters = _plus.Info.characterCount;
             if (IsPlaying || IsPaused) _state = State.Finished;
-        }
-
-        private interface IVertexModifier
-        {
-            void Update();
-            void Modify(int idx, TMP_CharacterInfo info, Vector3[] vtx, int vtxtop);
-        }
-
-        private class Quaker : IVertexModifier
-        {
-            private float _time;
-            private float _speed = 1.0f/0.7f;
-            private float _horizontal;
-            private float _vertical;
-            private int _seed = 200;
-            private const int A = 1664525;
-            private const int C = 1013904223;
-            private const int M = 0x7fffffff;
-
-            public void Update()
-            {
-                _time += Mathf.PI * 2.0f * Time.deltaTime * _speed;
-
-                if (_time >= Mathf.PI * 2.0f)
-                {
-                    _time -= Mathf.PI * 2.0f;
-                }
-
-                _horizontal = GetRand();
-                _vertical = GetRand();
-            }
-
-            public void Modify(int idx, TMP_CharacterInfo info, Vector3[] vtx, int vtxtop)
-            {
-                var o = GetOffset(idx);
-                var sz = info.pointSize * 0.15f;
-                vtx[vtxtop + 0] += o * sz;
-                vtx[vtxtop + 1] += o * sz;
-                vtx[vtxtop + 2] += o * sz;
-                vtx[vtxtop + 3] += o * sz;
-            }
-
-
-            private Vector3 GetOffset(int idx)
-            {
-                var w = Mathf.Sin(_time + idx * 1.0f) + 0.5f;
-
-                if (w < 0.0f) return Vector3.zero;
-
-                return new Vector3(w * _horizontal, w * _vertical, 0);
-            }
-
-            private float GetRand()
-            {
-                _seed = (_seed * A + C) & M;
-                var r = _seed * (1.0f / (float)M);
-                return (r - 0.5f) * 2.0f;
-            }
         }
     }
 }

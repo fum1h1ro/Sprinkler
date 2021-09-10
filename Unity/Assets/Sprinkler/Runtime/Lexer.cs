@@ -49,18 +49,18 @@ namespace Sprinkler
                 _end = -1;
                 if (_start >= _src.Length) return false;
 
-                bool isTag = _src[_start] == TextProcessor.TagOpenChar;
+                bool isTag = _src[_start] == TextProcessor.TagStartChar;
 
                 for (int i = _start; i < _src.Length; ++i)
                 {
                     var c = _src[i];
 
-                    if (!isTag && c == TextProcessor.TagOpenChar)
+                    if (!isTag && c == TextProcessor.TagStartChar)
                     {
                         _end = i - 1;
                         break;
                     }
-                    if (isTag && c == TextProcessor.TagCloseChar)
+                    if (isTag && c == TextProcessor.TagEndChar)
                     {
                         _end = i;
                         break;
