@@ -759,7 +759,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Plus: {fileID: 264335863}
   Player: {fileID: 264335862}
-  Text: <quake><shout>HELLO!</shout></quake>
+  Text: <fade>HELLO!</fade>
 --- !u!114 &1995317242
 MonoBehaviour:
   m_ObjectHideFlags: 0

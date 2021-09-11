@@ -143,5 +143,15 @@ namespace Sprinkler
         {
             return this.Equals(new ReadOnlySpan(b));
         }
+
+        public override int GetHashCode()
+        {
+            int c = 0;
+            for (int i = 0; i < Length; ++i)
+            {
+                c ^= this[i];
+            }
+            return c;
+        }
     }
 }

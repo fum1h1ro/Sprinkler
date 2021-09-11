@@ -28,42 +28,7 @@ namespace Sprinkler
             [FieldOffset(4)] public float Wait;
         }
 
-        public struct CharAttribute
-        {
-            public TextEffects.TypeFlag AnimType;
-            public float Time;
-
-            public struct QuakeParam
-            {
-                public float Offset;
-            }
-
-            public struct ShoutParam
-            {
-            }
-
-            public QuakeParam Quake;
-            public ShoutParam Shout;
-        }
-
-        //[StructLayout(LayoutKind.Explicit)]
-        //public struct CharParameter
-        //{
-        //    public struct QuakeParam
-        //    {
-        //        public float Time;
-        //    }
-
-        //    public struct ShoutParam
-        //    {
-        //        public float Time;
-        //    }
-
-        //    [FieldOffset(0)] public QuakeParam Quake;
-        //    [FieldOffset(0)] public ShoutParam Shout;
-        //}
-
-        public struct TagParam
+        private struct TagParam
         {
             public ReadOnlySpan Value;
             public int Start;
@@ -76,6 +41,7 @@ namespace Sprinkler
         private ExpandableCharArray _buffer = new ExpandableCharArray(128);
         private ExpandableArray<CharAttribute> _attrs = new ExpandableArray<CharAttribute>(128);
         private Dictionary<string, TagParam> _openedTags = new Dictionary<string, TagParam>();
+        private Dictionary<ReadOnlySpan, Action<bool, ReadOnlySpan>> _tagProc = new Dictionary<ReadOnlySpan, Action<bool, ReadOnlySpan>>();
 
         public int Length => _buffer.Length;
         public char[] ToArray() => _buffer.Array;
@@ -85,6 +51,11 @@ namespace Sprinkler
         public TextProcessor(TMP_Text tmptext)
         {
             _text = tmptext;
+
+            _tagProc[new ReadOnlySpan(Tags.Quake)] = TagQuake;
+            _tagProc[new ReadOnlySpan(Tags.Shout)] = TagShout;
+            _tagProc[new ReadOnlySpan(Tags.Fade)] = TagFade;
+
             SetText(_text.text);
         }
 
@@ -150,6 +121,12 @@ namespace Sprinkler
 
         private void OpenTag(ReadOnlySpan span)
         {
+            if (_tagProc.ContainsKey(_tag.Name))
+            {
+                _tagProc[_tag.Name](true, span);
+                return;
+            }
+
             if (_tag.Name.Equals(Tags.Wait))
             {
                 var vals = new TextSplitter(_tag.Value);
@@ -159,18 +136,6 @@ namespace Sprinkler
                     _commands.Add(new Command{ Type = CommandType.Wait, Wait = NumberParser.Parse(e) });
                     return;
                 }
-            }
-            if (_tag.Name.Equals(Tags.Quake))
-            {
-                Assert.IsTrue((_currentFlag & TextEffects.TypeFlag.Quake) == 0);
-                _currentFlag |= TextEffects.TypeFlag.Quake;
-                return;
-            }
-            if (_tag.Name.Equals(Tags.Shout))
-            {
-                Assert.IsTrue((_currentFlag & TextEffects.TypeFlag.Shout) == 0);
-                _currentFlag |= TextEffects.TypeFlag.Shout;
-                return;
             }
             if (_tag.Name.Equals(Tags.Ruby))
             {
@@ -187,18 +152,12 @@ namespace Sprinkler
 
         private void CloseTag(string src, ReadOnlySpan span)
         {
-            if (_tag.Name.Equals(Tags.Quake))
+            if (_tagProc.ContainsKey(_tag.Name))
             {
-                Assert.IsTrue((_currentFlag & TextEffects.TypeFlag.Quake) != 0);
-                _currentFlag &= ~TextEffects.TypeFlag.Quake;
+                _tagProc[_tag.Name](false, span);
                 return;
             }
-            if (_tag.Name.Equals(Tags.Shout))
-            {
-                Assert.IsTrue((_currentFlag & TextEffects.TypeFlag.Shout) != 0);
-                _currentFlag &= ~TextEffects.TypeFlag.Shout;
-                return;
-            }
+
             if (_tag.Name.Equals(Tags.Ruby))
             {
                 Assert.IsTrue(_openedTags.ContainsKey(Tags.Ruby));
@@ -232,5 +191,23 @@ namespace Sprinkler
                 AddChar(s, false);
             }
         }
+
+        private void EffectTag(bool isOpen, TextEffects.TypeFlag flag)
+        {
+            if (isOpen)
+            {
+                Assert.IsTrue((_currentFlag & flag) == 0);
+                _currentFlag |= flag;
+            }
+            else
+            {
+                Assert.IsTrue((_currentFlag & flag) != 0);
+                _currentFlag &= ~flag;
+            }
+        }
+
+        private void TagQuake(bool isOpen, ReadOnlySpan span) => EffectTag(isOpen, TextEffects.TypeFlag.Quake);
+        private void TagShout(bool isOpen, ReadOnlySpan span) => EffectTag(isOpen, TextEffects.TypeFlag.Shout);
+        private void TagFade(bool isOpen, ReadOnlySpan span) => EffectTag(isOpen, TextEffects.TypeFlag.Fade);
     }
 }

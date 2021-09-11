@@ -7,6 +7,7 @@ namespace Sprinkler.TextEffects
         Normal,
         Quake,
         Shout,
+        Fade,
     }
 
     [Flags]
@@ -15,5 +16,6 @@ namespace Sprinkler.TextEffects
         //Normal = (1 << Type.Normal),
         Quake = (1 << Type.Quake),
         Shout = (1 << Type.Shout),
+        Fade = (1 << Type.Fade),
     }
 }

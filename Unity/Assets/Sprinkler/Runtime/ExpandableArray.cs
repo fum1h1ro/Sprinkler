@@ -49,20 +49,20 @@ namespace Sprinkler
             _array[_length++] = v;
         }
 
-        public T this[int idx]
+        public ref T this[int idx]
         {
             get
             {
                 Assert.IsTrue(0 <= idx);
                 Assert.IsTrue(idx < _length);
-                return _array[idx];
+                return ref _array[idx];
             }
-            set
-            {
-                Assert.IsTrue(0 <= idx);
-                Assert.IsTrue(idx < _length);
-                _array[idx] = value;
-            }
+            //set
+            //{
+            //    Assert.IsTrue(0 <= idx);
+            //    Assert.IsTrue(idx < _length);
+            //    ref _array[idx] = value;
+            //}
         }
     }
 

@@ -9,21 +9,7 @@ namespace Sprinkler.TextEffects
     {
         private float _speed = Mathf.PI / 0.7f;
 
-        public override void Setup(ExpandableArray<TextProcessor.CharAttribute> attrs, int idx, int blockIndex)
-        {
-            //var p = attrs[idx];
-            //p.Time = 0.0f;
-            //attrs[idx] = p;
-        }
-
-        public override void Update(ExpandableArray<TextProcessor.CharAttribute> attrs, int idx)
-        {
-            //var p = attrs[idx];
-            //p.Time += Mathf.PI * 2.0f * Time.deltaTime * _speed;
-            //attrs[idx] = p;
-        }
-
-        public void Modify(TextProcessor.CharAttribute attr, TMP_CharacterInfo info, Vector3[] vtx, int vtxtop)
+        public void Modify(in CharAttribute attr, TMP_CharacterInfo info, Vector3[] vtx, int vtxtop)
         {
             var t = attr.Time * _speed;
             var b = (t <= Mathf.PI)? t / Mathf.PI : 1.0f;

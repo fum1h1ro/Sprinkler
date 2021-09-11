@@ -10,5 +10,6 @@ namespace Sprinkler
         public static readonly string Ruby = "ruby";
         public static readonly string Quake = "quake";
         public static readonly string Shout = "shout";
+        public static readonly string Fade = "fade";
     }
 }

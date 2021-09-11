@@ -49,6 +49,7 @@ namespace Sprinkler.Components
                 _effectors = new Dictionary<TextEffects.TypeFlag, (EffectorBase, EffectorWork)>();
                 _effectors[TextEffects.TypeFlag.Quake] = (new Quaker(), new EffectorWork());
                 _effectors[TextEffects.TypeFlag.Shout] = (new Shouter(), new EffectorWork());
+                _effectors[TextEffects.TypeFlag.Fade] = (new Fader(), new EffectorWork());
             }
 
             _transform = _transform ?? GetComponent<RectTransform>();
