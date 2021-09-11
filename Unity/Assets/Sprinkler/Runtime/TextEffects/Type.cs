@@ -1,6 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+using System;
 
 namespace Sprinkler.TextEffects
 {
@@ -11,4 +9,11 @@ namespace Sprinkler.TextEffects
         Shout,
     }
 
+    [Flags]
+    public enum TypeFlag : uint
+    {
+        //Normal = (1 << Type.Normal),
+        Quake = (1 << Type.Quake),
+        Shout = (1 << Type.Shout),
+    }
 }

@@ -30,8 +30,20 @@ namespace Sprinkler
 
         public struct CharAttribute
         {
-            public TextEffects.Type AnimType;
+            public TextEffects.TypeFlag AnimType;
             public float Time;
+
+            public struct QuakeParam
+            {
+                public float Offset;
+            }
+
+            public struct ShoutParam
+            {
+            }
+
+            public QuakeParam Quake;
+            public ShoutParam Shout;
         }
 
         //[StructLayout(LayoutKind.Explicit)]
@@ -58,7 +70,7 @@ namespace Sprinkler
         }
 
         private readonly TMP_Text _text;
-        private TextEffects.Type _currentAnim;
+        private TextEffects.TypeFlag _currentFlag;
         private TagParser _tag = new TagParser();
         private List<Command> _commands = new List<Command>();
         private ExpandableCharArray _buffer = new ExpandableCharArray(128);
@@ -91,7 +103,7 @@ namespace Sprinkler
             _buffer.Add(c);
             if (isVisible)
             {
-                _attrs.Add(new CharAttribute{ AnimType = _currentAnim, Time = 0.0f });
+                _attrs.Add(new CharAttribute{ AnimType = _currentFlag, Time = 0.0f });
             }
         }
 
@@ -106,7 +118,7 @@ namespace Sprinkler
             _commands.Clear();
             _buffer.Clear();
             _attrs.Clear();
-            _currentAnim = TextEffects.Type.Normal;
+            _currentFlag = 0;
             _openedTags.Clear();
 
             foreach (var span in lex)
@@ -150,14 +162,14 @@ namespace Sprinkler
             }
             if (_tag.Name.Equals(Tags.Quake))
             {
-                Assert.AreEqual(_currentAnim, TextEffects.Type.Normal);
-                _currentAnim = TextEffects.Type.Quake;
+                Assert.IsTrue((_currentFlag & TextEffects.TypeFlag.Quake) == 0);
+                _currentFlag |= TextEffects.TypeFlag.Quake;
                 return;
             }
             if (_tag.Name.Equals(Tags.Shout))
             {
-                Assert.AreEqual(_currentAnim, TextEffects.Type.Normal);
-                _currentAnim = TextEffects.Type.Shout;
+                Assert.IsTrue((_currentFlag & TextEffects.TypeFlag.Shout) == 0);
+                _currentFlag |= TextEffects.TypeFlag.Shout;
                 return;
             }
             if (_tag.Name.Equals(Tags.Ruby))
@@ -177,16 +189,14 @@ namespace Sprinkler
         {
             if (_tag.Name.Equals(Tags.Quake))
             {
-                //Assert.IsTrue(_openedTags.ContainsKey("quake"));
-                Assert.AreEqual(_currentAnim, TextEffects.Type.Quake);
-                _currentAnim = TextEffects.Type.Normal;
+                Assert.IsTrue((_currentFlag & TextEffects.TypeFlag.Quake) != 0);
+                _currentFlag &= ~TextEffects.TypeFlag.Quake;
                 return;
             }
             if (_tag.Name.Equals(Tags.Shout))
             {
-                //Assert.IsTrue(_openedTags.ContainsKey("quake"));
-                Assert.AreEqual(_currentAnim, TextEffects.Type.Shout);
-                _currentAnim = TextEffects.Type.Normal;
+                Assert.IsTrue((_currentFlag & TextEffects.TypeFlag.Shout) != 0);
+                _currentFlag &= ~TextEffects.TypeFlag.Shout;
                 return;
             }
             if (_tag.Name.Equals(Tags.Ruby))

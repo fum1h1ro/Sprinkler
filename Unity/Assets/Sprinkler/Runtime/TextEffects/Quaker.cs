@@ -5,37 +5,36 @@ using TMPro;
 
 namespace Sprinkler.TextEffects
 {
-    public class Quaker : IVertexModifier
+    public class Quaker : EffectorBase, IVertexModifier
     {
-        private float _speed = 1.0f/0.7f;
+        private float _speed = (Mathf.PI * 2.0f) / 0.7f;
         private int _seed = 200;
         private const int A = 1664525;
         private const int C = 1013904223;
         private const int M = 0x7fffffff;
 
-        public void Setup(ExpandableArray<TextProcessor.CharAttribute> parameters, int idx)
+        public override void Setup(ExpandableArray<TextProcessor.CharAttribute> attrs, int idx, int blockIndex)
         {
-            var p = parameters[idx];
-            p.Time = GetRand() * 10.0f;
-            parameters[idx] = p;
+            var a = attrs[idx];
+            a.Quake.Offset = GetRand() * 10.0f;
+            attrs[idx] = a;
         }
 
-        public void Update(ExpandableArray<TextProcessor.CharAttribute> parameters, int idx)
+        public override void Update(ExpandableArray<TextProcessor.CharAttribute> attrs, int idx)
         {
-            var p = parameters[idx];
-            p.Time += Mathf.PI * 2.0f * Time.deltaTime * _speed;
+            //var p = attrs[idx];
+            //p.Time += Mathf.PI * 2.0f * Time.deltaTime * _speed;
 
-            if (p.Time >= Mathf.PI * 2.0f)
-            {
-                p.Time -= Mathf.PI * 2.0f;
-            }
-            parameters[idx] = p;
+            //if (p.Time >= Mathf.PI * 2.0f)
+            //{
+            //    p.Time -= Mathf.PI * 2.0f;
+            //}
+            //attrs[idx] = p;
         }
 
-        public void Modify(ExpandableArray<TextProcessor.CharAttribute> parameters, int idx, TMP_CharacterInfo info, Vector3[] vtx, int vtxtop)
+        public void Modify(TextProcessor.CharAttribute attr, TMP_CharacterInfo info, Vector3[] vtx, int vtxtop)
         {
-            var p = parameters[idx];
-            var w = Mathf.Sin(p.Time) + 0.5f;
+            var w = Mathf.Sin((attr.Time + attr.Quake.Offset) * _speed) + 0.5f;
             var o = (w < 0.0f)? Vector3.zero : new Vector3(GetRand(), GetRand(), 0);
             var sz = info.pointSize * 0.1f;
             for (var i = 0; i < 4; ++i) vtx[vtxtop+i] += o * sz;
@@ -46,36 +45,6 @@ namespace Sprinkler.TextEffects
             _seed = (_seed * A + C) & M;
             var r = _seed * (1.0f / (float)M);
             return (r - 0.5f) * 2.0f;
-        }
-    }
-
-    public class Shouter : IVertexModifier
-    {
-        private float _speed = 1.0f/0.7f;
-
-        public void Setup(ExpandableArray<TextProcessor.CharAttribute> parameters, int idx)
-        {
-            var p = parameters[idx];
-            p.Time = 0.0f;
-            parameters[idx] = p;
-        }
-
-        public void Update(ExpandableArray<TextProcessor.CharAttribute> parameters, int idx)
-        {
-            var p = parameters[idx];
-            p.Time += Mathf.PI * 2.0f * Time.deltaTime * _speed;
-            parameters[idx] = p;
-        }
-
-        public void Modify(ExpandableArray<TextProcessor.CharAttribute> parameters, int idx, TMP_CharacterInfo info, Vector3[] vtx, int vtxtop)
-        {
-            var p = parameters[idx];
-            var b = (p.Time <= Mathf.PI)? p.Time / Mathf.PI : 1.0f;
-            var w = (p.Time <= Mathf.PI)? Mathf.Sin(p.Time) : 0.0f;
-
-            var center = (vtx[vtxtop + 0] + vtx[vtxtop + 1] + vtx[vtxtop + 2] + vtx[vtxtop + 3]) * 0.25f;
-
-            for (var i = 0; i < 4; ++i) vtx[vtxtop+i] = center + (vtx[vtxtop+i] - center) * (b + w);
         }
     }
 }

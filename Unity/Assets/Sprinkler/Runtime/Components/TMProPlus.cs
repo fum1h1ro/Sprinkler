@@ -24,8 +24,12 @@ namespace Sprinkler.Components
         private string _prevText;
         private bool _rubyable;
         private int _adjustFontSizeForLine;
-        private Quaker _quaker = new Quaker();
-        private Shouter _shouter = new Shouter();
+        private Dictionary<TextEffects.TypeFlag, (EffectorBase Effector, EffectorWork Work)> _effectors;
+
+        private class EffectorWork
+        {
+            public int Index;
+        }
 
         public static TMProPlus GetOrAdd(GameObject g)
         {
@@ -37,10 +41,16 @@ namespace Sprinkler.Components
         public TMP_Text Text => _text;
         public TMP_TextInfo Info => _info;
         public List<TextProcessor.Command> Commands => _proc.Commands;
-        //public ExpandableArray<TextProcessor.CharAttribute> Attributes => _proc.Attributes;
 
         private void OnEnable()
         {
+            if (_effectors == null)
+            {
+                _effectors = new Dictionary<TextEffects.TypeFlag, (EffectorBase, EffectorWork)>();
+                _effectors[TextEffects.TypeFlag.Quake] = (new Quaker(), new EffectorWork());
+                _effectors[TextEffects.TypeFlag.Shout] = (new Shouter(), new EffectorWork());
+            }
+
             _transform = _transform ?? GetComponent<RectTransform>();
             _text = _text ?? (TMP_Text)GetComponent<TextMeshPro>() ?? (TMP_Text)GetComponent<TextMeshProUGUI>();
             _text.richText = true;
@@ -83,26 +93,24 @@ namespace Sprinkler.Components
             {
                 _proc.SetText(text);
 
-                int idx = 0;
-                var prevAnimType = TextEffects.Type.Normal;
+                var currentFlag = (TextEffects.TypeFlag)0;
                 for (var i = 0; i < _proc.Attributes.Length; ++i)
                 {
-                    var animType = _proc.Attributes[i].AnimType;
-                    if (animType != prevAnimType)
+                    var charAnimFlag = _proc.Attributes[i].AnimType;
+                    foreach (var effectorFlag in _effectors.Keys)
                     {
-                        idx = 0;
-                        prevAnimType = animType;
-                    }
-                    switch (animType)
-                    {
-                    case TextEffects.Type.Quake:
-                            _quaker.Setup(_proc.Attributes, idx++);
-                        break;
-                    case TextEffects.Type.Shout:
-                            _shouter.Setup(_proc.Attributes, idx++);
-                        break;
-                    default:
-                        break;
+                        var e = _effectors[effectorFlag];
+                        // first
+                        if ((charAnimFlag & effectorFlag) != 0 && (effectorFlag & currentFlag) == 0)
+                        {
+                            e.Work.Index = 0;
+                            currentFlag |= charAnimFlag;
+                        }
+                        else if ((charAnimFlag & effectorFlag) == 0)
+                        {
+                            currentFlag &= ~charAnimFlag;
+                        }
+                        e.Effector.Setup(_proc.Attributes, i, e.Work.Index++);
                     }
                 }
             }
@@ -131,16 +139,24 @@ namespace Sprinkler.Components
         private void CharUpdate()
         {
             var sz = Mathf.Min(_text.maxVisibleCharacters, _info.characterCount);
+            var dt = Time.deltaTime;
             for (int i = 0; i < sz; ++i)
             {
                 var charInfo = _info.characterInfo[i];
                 if (!charInfo.isVisible) continue;
 
-                switch (_proc.Attributes[i].AnimType)
+                var p = _proc.Attributes[i];
+                p.Time += dt;
+                _proc.Attributes[i] = p;
+
+                foreach (var effectorFlag in _effectors.Keys)
                 {
-                case TextEffects.Type.Quake: _quaker.Update(_proc.Attributes, i); break;
-                case TextEffects.Type.Shout: _shouter.Update(_proc.Attributes, i); break;
-                default: break;
+                    var charAnimFlag = _proc.Attributes[i].AnimType;
+                    if ((charAnimFlag & effectorFlag) != 0)
+                    {
+                        var e = _effectors[effectorFlag];
+                        e.Effector.Update(_proc.Attributes, i);
+                    }
                 }
             }
         }
@@ -157,13 +173,25 @@ namespace Sprinkler.Components
                 int materialIndex = charInfo.materialReferenceIndex;
                 int vertexIndex = charInfo.vertexIndex;
 
-                var vertices = _info.meshInfo[materialIndex].vertices;
+                var meshInfo = _info.meshInfo[materialIndex];
+                var vertices = meshInfo.vertices;
+                var colors = meshInfo.colors32;
 
-                switch (_proc.Attributes[i].AnimType)
+                foreach (var effectorFlag in _effectors.Keys)
                 {
-                case TextEffects.Type.Quake: _quaker.Modify(_proc.Attributes, i, charInfo, vertices, vertexIndex); break;
-                case TextEffects.Type.Shout: _shouter.Modify(_proc.Attributes, i, charInfo, vertices, vertexIndex); break;
-                default: break;
+                    var charAnimFlag = _proc.Attributes[i].AnimType;
+                    if ((charAnimFlag & effectorFlag) != 0)
+                    {
+                        var e = _effectors[effectorFlag];
+                        if (e.Effector is IVertexModifier v)
+                        {
+                            v.Modify(_proc.Attributes[i], charInfo, vertices, vertexIndex);
+                        }
+                        if (e.Effector is IColorModifier c)
+                        {
+                            c.Modify(_proc.Attributes[i], charInfo, colors, vertexIndex);
+                        }
+                    }
                 }
             }
 
@@ -171,6 +199,7 @@ namespace Sprinkler.Components
             {
                 var meshInfo = _info.meshInfo[i];
                 meshInfo.mesh.vertices = meshInfo.vertices;
+                meshInfo.mesh.colors32 = meshInfo.colors32;
                 _text.UpdateGeometry(meshInfo.mesh, i);
             }
         }
