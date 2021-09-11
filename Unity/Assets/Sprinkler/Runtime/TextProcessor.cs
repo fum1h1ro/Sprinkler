@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Assertions;
 using TMPro;
+using Sprinkler.TextEffects;
 
 namespace Sprinkler
 {
@@ -19,13 +20,6 @@ namespace Sprinkler
             Wait,
         }
 
-        public enum AnimType : sbyte
-        {
-            Normal,
-            Quake,
-            Shout,
-        }
-
         [StructLayout(LayoutKind.Explicit)]
         public struct Command
         {
@@ -36,25 +30,26 @@ namespace Sprinkler
 
         public struct CharAttribute
         {
-            public AnimType AnimType;
+            public TextEffects.Type AnimType;
+            public float Time;
         }
 
-        [StructLayout(LayoutKind.Explicit)]
-        public struct CharParameter
-        {
-            public struct QuakeParam
-            {
-                public float Time;
-            }
+        //[StructLayout(LayoutKind.Explicit)]
+        //public struct CharParameter
+        //{
+        //    public struct QuakeParam
+        //    {
+        //        public float Time;
+        //    }
 
-            public struct ShoutParam
-            {
-                public float Time;
-            }
+        //    public struct ShoutParam
+        //    {
+        //        public float Time;
+        //    }
 
-            [FieldOffset(0)] public QuakeParam Quake;
-            [FieldOffset(0)] public ShoutParam Shout;
-        }
+        //    [FieldOffset(0)] public QuakeParam Quake;
+        //    [FieldOffset(0)] public ShoutParam Shout;
+        //}
 
         public struct TagParam
         {
@@ -63,19 +58,17 @@ namespace Sprinkler
         }
 
         private readonly TMP_Text _text;
-        private AnimType _currentAnim;
+        private TextEffects.Type _currentAnim;
         private TagParser _tag = new TagParser();
         private List<Command> _commands = new List<Command>();
         private ExpandableCharArray _buffer = new ExpandableCharArray(128);
         private ExpandableArray<CharAttribute> _attrs = new ExpandableArray<CharAttribute>(128);
-        private ExpandableArray<CharParameter> _params = new ExpandableArray<CharParameter>(128);
         private Dictionary<string, TagParam> _openedTags = new Dictionary<string, TagParam>();
 
         public int Length => _buffer.Length;
         public char[] ToArray() => _buffer.Array;
         public List<Command> Commands => _commands;
         public ExpandableArray<CharAttribute> Attributes => _attrs;
-        public ExpandableArray<CharParameter> Parameters => _params;
 
         public TextProcessor(TMP_Text tmptext)
         {
@@ -98,8 +91,7 @@ namespace Sprinkler
             _buffer.Add(c);
             if (isVisible)
             {
-                _attrs.Add(new CharAttribute{ AnimType = _currentAnim });
-                _params.Add(new CharParameter());
+                _attrs.Add(new CharAttribute{ AnimType = _currentAnim, Time = 0.0f });
             }
         }
 
@@ -114,8 +106,7 @@ namespace Sprinkler
             _commands.Clear();
             _buffer.Clear();
             _attrs.Clear();
-            _params.Clear();
-            _currentAnim = AnimType.Normal;
+            _currentAnim = TextEffects.Type.Normal;
             _openedTags.Clear();
 
             foreach (var span in lex)
@@ -147,7 +138,7 @@ namespace Sprinkler
 
         private void OpenTag(ReadOnlySpan span)
         {
-            if (_tag.Name.Equals("wait"))
+            if (_tag.Name.Equals(Tags.Wait))
             {
                 var vals = new TextSplitter(_tag.Value);
                 Assert.AreEqual(vals.Count(), 1);
@@ -157,22 +148,22 @@ namespace Sprinkler
                     return;
                 }
             }
-            if (_tag.Name.Equals("quake"))
+            if (_tag.Name.Equals(Tags.Quake))
             {
-                Assert.AreEqual(_currentAnim, AnimType.Normal);
-                _currentAnim = AnimType.Quake;
+                Assert.AreEqual(_currentAnim, TextEffects.Type.Normal);
+                _currentAnim = TextEffects.Type.Quake;
                 return;
             }
-            if (_tag.Name.Equals("shout"))
+            if (_tag.Name.Equals(Tags.Shout))
             {
-                Assert.AreEqual(_currentAnim, AnimType.Normal);
-                _currentAnim = AnimType.Shout;
+                Assert.AreEqual(_currentAnim, TextEffects.Type.Normal);
+                _currentAnim = TextEffects.Type.Shout;
                 return;
             }
-            if (_tag.Name.Equals("ruby"))
+            if (_tag.Name.Equals(Tags.Ruby))
             {
-                Assert.IsFalse(_openedTags.ContainsKey("ruby"));
-                _openedTags["ruby"] = new TagParam{ Value = _tag.Value, Start = span.End + 1 };
+                Assert.IsFalse(_openedTags.ContainsKey(Tags.Ruby));
+                _openedTags[Tags.Ruby] = new TagParam{ Value = _tag.Value, Start = span.End + 1 };
                 return;
             }
 
@@ -184,26 +175,26 @@ namespace Sprinkler
 
         private void CloseTag(string src, ReadOnlySpan span)
         {
-            if (_tag.Name.Equals("quake"))
+            if (_tag.Name.Equals(Tags.Quake))
             {
                 //Assert.IsTrue(_openedTags.ContainsKey("quake"));
-                Assert.AreEqual(_currentAnim, AnimType.Quake);
-                _currentAnim = AnimType.Normal;
+                Assert.AreEqual(_currentAnim, TextEffects.Type.Quake);
+                _currentAnim = TextEffects.Type.Normal;
                 return;
             }
-            if (_tag.Name.Equals("shout"))
+            if (_tag.Name.Equals(Tags.Shout))
             {
                 //Assert.IsTrue(_openedTags.ContainsKey("quake"));
-                Assert.AreEqual(_currentAnim, AnimType.Shout);
-                _currentAnim = AnimType.Normal;
+                Assert.AreEqual(_currentAnim, TextEffects.Type.Shout);
+                _currentAnim = TextEffects.Type.Normal;
                 return;
             }
-            if (_tag.Name.Equals("ruby"))
+            if (_tag.Name.Equals(Tags.Ruby))
             {
-                Assert.IsTrue(_openedTags.ContainsKey("ruby"));
+                Assert.IsTrue(_openedTags.ContainsKey(Tags.Ruby));
                 // @todo string...
-                var ruby = _openedTags["ruby"].Value.ToString();
-                var body = (new ReadOnlySpan(src, _openedTags["ruby"].Start, span.Start - 1)).ToString();
+                var ruby = _openedTags[Tags.Ruby].Value.ToString();
+                var body = (new ReadOnlySpan(src, _openedTags[Tags.Ruby].Start, span.Start - 1)).ToString();
                 var rubySize = _text.GetPreferredValues($"<size=50%>{ruby}</size>");
                 var bodySize = _text.GetPreferredValues(body);
 
@@ -222,7 +213,7 @@ namespace Sprinkler
                 }
                 _commands.Add(new Command{ Type = CommandType.Put, Count = 1 + ruby.Length });
 
-                _openedTags.Remove("ruby");
+                _openedTags.Remove(Tags.Ruby);
                 return;
             }
 

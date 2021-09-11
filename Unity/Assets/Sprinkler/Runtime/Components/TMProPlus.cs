@@ -84,8 +84,8 @@ namespace Sprinkler.Components
                 _proc.SetText(text);
 
                 int idx = 0;
-                var prevAnimType = TextProcessor.AnimType.Normal;
-                for (var i = 0; i < _proc.Parameters.Length; ++i)
+                var prevAnimType = TextEffects.Type.Normal;
+                for (var i = 0; i < _proc.Attributes.Length; ++i)
                 {
                     var animType = _proc.Attributes[i].AnimType;
                     if (animType != prevAnimType)
@@ -95,11 +95,11 @@ namespace Sprinkler.Components
                     }
                     switch (animType)
                     {
-                    case TextProcessor.AnimType.Quake:
-                        _quaker.Setup(_proc.Parameters, idx++);
+                    case TextEffects.Type.Quake:
+                            _quaker.Setup(_proc.Attributes, idx++);
                         break;
-                    case TextProcessor.AnimType.Shout:
-                        _shouter.Setup(_proc.Parameters, idx++);
+                    case TextEffects.Type.Shout:
+                            _shouter.Setup(_proc.Attributes, idx++);
                         break;
                     default:
                         break;
@@ -138,8 +138,8 @@ namespace Sprinkler.Components
 
                 switch (_proc.Attributes[i].AnimType)
                 {
-                case TextProcessor.AnimType.Quake: _quaker.Update(_proc.Parameters, i); break;
-                case TextProcessor.AnimType.Shout: _shouter.Update(_proc.Parameters, i); break;
+                case TextEffects.Type.Quake: _quaker.Update(_proc.Attributes, i); break;
+                case TextEffects.Type.Shout: _shouter.Update(_proc.Attributes, i); break;
                 default: break;
                 }
             }
@@ -148,7 +148,6 @@ namespace Sprinkler.Components
         private void MeshUpdate()
         {
             _text.ForceMeshUpdate();
-            //Debug.Log($"{_info.characterCount} {_proc.Parameters.Length} {_proc.Attributes.Length}");
 
             for (int i = 0; i < _info.characterCount; ++i)
             {
@@ -160,15 +159,13 @@ namespace Sprinkler.Components
 
                 var vertices = _info.meshInfo[materialIndex].vertices;
 
-                //Debug.Log($"{charInfo.character} {_proc.Attributes[i].AnimType}");
                 switch (_proc.Attributes[i].AnimType)
                 {
-                case TextProcessor.AnimType.Quake: _quaker.Modify(_proc.Parameters, i, charInfo, vertices, vertexIndex); break;
-                case TextProcessor.AnimType.Shout: _shouter.Modify(_proc.Parameters, i, charInfo, vertices, vertexIndex); break;
+                case TextEffects.Type.Quake: _quaker.Modify(_proc.Attributes, i, charInfo, vertices, vertexIndex); break;
+                case TextEffects.Type.Shout: _shouter.Modify(_proc.Attributes, i, charInfo, vertices, vertexIndex); break;
                 default: break;
                 }
             }
-            //Debug.LogError("E");
 
             for (int i = 0; i < _info.meshInfo.Length; ++i)
             {
