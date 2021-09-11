@@ -27,7 +27,9 @@ namespace Sprinkler.Components
         private TMProPlus _plus;
         private State _state;
         private float _defaultWait;
+        private float _waitScale;
         private float _wait;
+        private float _time;
         private int _cursor;
 
 
@@ -56,22 +58,26 @@ namespace Sprinkler.Components
                 return;
             }
 
-            if (_wait > 0.0f)
+            if (_time < _wait * _waitScale)
             {
-                _wait = Mathf.Max(0.0f, _wait - Time.deltaTime);
+                _time += Time.deltaTime;
                 return;
             }
+            _time = 0.0f;
 
             var cmd = _plus.Commands[_cursor++];
 
             switch (cmd.Type)
             {
             case TextProcessor.CommandType.Put:
-                _plus.Text.maxVisibleCharacters += cmd.Count;
+                _plus.Text.maxVisibleCharacters += cmd.Put.Count;
                 _wait = _defaultWait;
                 break;
             case TextProcessor.CommandType.Wait:
-                _wait = cmd.Wait;
+                _wait = cmd.Wait.Second;
+                break;
+            case TextProcessor.CommandType.Speed:
+                _waitScale = cmd.Speed.Scale;
                 break;
             }
         }
@@ -104,7 +110,9 @@ namespace Sprinkler.Components
         {
             _cursor = 0;
             _defaultWait = Wait;
-            _wait = 0.0f;
+            _waitScale = 1.0f;
+            _wait = _defaultWait;
+            _time = 0.0f;
             _plus.Text.maxVisibleCharacters = 0;
             _state = State.Empty;
         }

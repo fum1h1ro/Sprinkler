@@ -18,14 +18,30 @@ namespace Sprinkler
         {
             Put,
             Wait,
+            Speed,
         }
 
         [StructLayout(LayoutKind.Explicit)]
         public struct Command
         {
             [FieldOffset(0)] public CommandType Type;
-            [FieldOffset(4)] public int Count;
-            [FieldOffset(4)] public float Wait;
+
+            public struct PutParam
+            {
+                public int Count;
+            }
+            public struct WaitParam 
+            {
+                public float Second;
+            }
+            public struct SpeedParam 
+            {
+                public float Scale;
+            }
+
+            [FieldOffset(4)] public PutParam Put;
+            [FieldOffset(4)] public WaitParam Wait;
+            [FieldOffset(4)] public SpeedParam Speed;
         }
 
         private struct TagParam
@@ -70,7 +86,6 @@ namespace Sprinkler
 
         private void AddChar(char c, bool isVisible)
         {
-            //Debug.Log($"{_currentAnim}");
             _buffer.Add(c);
             if (isVisible)
             {
@@ -112,7 +127,9 @@ namespace Sprinkler
                 {
                     for (int i = 0; i < span.Length; ++i)
                     {
-                        _commands.Add(new Command{ Type = CommandType.Put, Count = 1 });
+                        var cmd = new Command{ Type = CommandType.Put };
+                        cmd.Put.Count = 1;
+                        _commands.Add(cmd);
                         AddChar(span[i], true);
                     }
                 }
@@ -133,7 +150,21 @@ namespace Sprinkler
                 Assert.AreEqual(vals.Count(), 1);
                 foreach (var e in vals)
                 {
-                    _commands.Add(new Command{ Type = CommandType.Wait, Wait = NumberParser.Parse(e) });
+                    var cmd = new Command{ Type = CommandType.Wait };
+                    cmd.Wait.Second = NumberParser.Parse(e);
+                    _commands.Add(cmd);
+                    return;
+                }
+            }
+            if (_tag.Name.Equals(Tags.Speed))
+            {
+                var vals = new TextSplitter(_tag.Value);
+                Assert.AreEqual(vals.Count(), 1);
+                foreach (var e in vals)
+                {
+                    var cmd = new Command{ Type = CommandType.Speed };
+                    cmd.Speed.Scale = 1.0f / NumberParser.Parse(e);
+                    _commands.Add(cmd);
                     return;
                 }
             }
@@ -178,9 +209,15 @@ namespace Sprinkler
 
                 for (int i = 0; i < body.Length - 1; ++i)
                 {
-                    _commands.Add(new Command{ Type = CommandType.Put, Count = 1 });
+                    var cmd = new Command{ Type = CommandType.Put };
+                    cmd.Put.Count = 1;
+                    _commands.Add(cmd);
                 }
-                _commands.Add(new Command{ Type = CommandType.Put, Count = 1 + ruby.Length });
+                {
+                    var cmd = new Command{ Type = CommandType.Put };
+                    cmd.Put.Count = 1 + ruby.Length;
+                    _commands.Add(cmd);
+                }
 
                 _openedTags.Remove(Tags.Ruby);
                 return;
