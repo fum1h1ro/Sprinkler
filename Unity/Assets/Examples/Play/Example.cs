@@ -10,6 +10,6 @@ public class Example : MonoBehaviour
     private void Start()
     {
         _player = GetComponent<TMProPlayer>();
-        _player.SetText("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", true);
+        _player.SetText("ABCDEFGHIJKLMNOPQRSTUVWXYZ<quake>0123456789</quake>", true);
     }
 }

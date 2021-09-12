@@ -25,6 +25,8 @@ namespace Sprinkler.Components
         private bool _rubyable;
         private int _adjustFontSizeForLine;
         private Dictionary<TextEffects.TypeFlag, (EffectorBase Effector, EffectorWork Work)> _effectors;
+        private int _currentPageIndex;
+        private ExpandableArray<TextProcessor.Command>.Span _currentCommands;
 
         private class EffectorWork
         {
@@ -40,7 +42,8 @@ namespace Sprinkler.Components
 
         public TMP_Text Text => _text;
         public TMP_TextInfo Info => _info;
-        public List<TextProcessor.Command> Commands => _proc.Commands;
+        public ExpandableArray<TextProcessor.Command>.Span Commands => _currentCommands;
+        public int PageCount => _proc.PageCount;
 
         private void OnEnable()
         {
@@ -88,7 +91,7 @@ namespace Sprinkler.Components
             _proc.Dispose();
         }
 
-        internal void SetText(string text)
+        internal void SetText(string text, int page=-1)
         {
             try
             {
@@ -119,12 +122,29 @@ namespace Sprinkler.Components
             {
                 Debug.LogError($"{e}");
             }
+
+            SetPageText(page);
+            _prevText = text;
+        }
+
+        public void SetPageText(int page=-1)
+        {
             var bak = _text.enabled;
             if (bak) _text.enabled = false;
-            _text.SetCharArray(_proc.ToArray(), 0, _proc.Length);
+            if (page < 0)
+            {
+                _text.SetCharArray(_proc.ToArray(), 0, _proc.Length);
+                _currentCommands = _proc.Commands.Slice(0, _proc.Commands.Length);
+            }
+            else
+            {
+                var span = _proc.GetPageSpan(page);
+                _text.SetCharArray(_proc.ToArray(), span.Start, span.Length);
+                _currentCommands = _proc.Commands.Slice(span.Start, span.Length);
+            }
             _text.enabled = bak;
             _text.ForceMeshUpdate();
-            _prevText = text;
+            _currentPageIndex = page;
         }
 
         private void AdjustFontSize()

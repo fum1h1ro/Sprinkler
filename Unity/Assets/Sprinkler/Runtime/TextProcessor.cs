@@ -44,6 +44,22 @@ namespace Sprinkler
             [FieldOffset(4)] public SpeedParam Speed;
         }
 
+        public struct PageSpan
+        {
+            public int Start;
+            public int Length;
+            public int AttrStart;
+            public int AttrLength;
+
+            public PageSpan(int start, int len, int astart, int alen)
+            {
+                Start = start;
+                Length = len;
+                AttrStart = astart;
+                AttrLength = alen;
+            }
+        }
+
         private struct TagParam
         {
             public ReadOnlySpan Value;
@@ -53,16 +69,20 @@ namespace Sprinkler
         private readonly TMP_Text _text;
         private TextEffects.TypeFlag _currentFlag;
         private TagParser _tag = new TagParser();
-        private List<Command> _commands = new List<Command>();
+        private ExpandableArray<Command> _commands = new ExpandableArray<Command>(128);
         private ExpandableCharArray _buffer = new ExpandableCharArray(128);
         private ExpandableArray<CharAttribute> _attrs = new ExpandableArray<CharAttribute>(128);
         private Dictionary<string, TagParam> _openedTags = new Dictionary<string, TagParam>();
         private Dictionary<ReadOnlySpan, Action<bool, ReadOnlySpan>> _tagProc = new Dictionary<ReadOnlySpan, Action<bool, ReadOnlySpan>>();
+        private List<PageSpan> _pages = new List<PageSpan>(8);
+        private (int, int) _pageStart;
 
         public int Length => _buffer.Length;
         public char[] ToArray() => _buffer.Array;
-        public List<Command> Commands => _commands;
+        public ExpandableArray<Command> Commands => _commands;
         public ExpandableArray<CharAttribute> Attributes => _attrs;
+        public int PageCount => _pages.Count;
+        public PageSpan GetPageSpan(int idx) => _pages[idx];
 
         public TextProcessor(TMP_Text tmptext)
         {
@@ -106,6 +126,8 @@ namespace Sprinkler
             _attrs.Clear();
             _currentFlag = 0;
             _openedTags.Clear();
+            _pageStart = (0, 0);
+            _pages.Clear();
 
             foreach (var span in lex)
             {
@@ -134,6 +156,23 @@ namespace Sprinkler
                     }
                 }
             }
+
+            PageBreak();
+            Debug.Log($"{_pages.Count}");
+            foreach (var p in _pages)
+            {
+                Debug.Log($"{p.Start} {p.Length} {p.AttrStart} {p.AttrLength}");
+            }
+        }
+
+        private void PageBreak()
+        {
+            var start = _pageStart.Item1;
+            var len = _buffer.Length - start;
+            var astart = _pageStart.Item2;
+            var alen = _attrs.Length - astart;
+            _pages.Add(new PageSpan(start, len, astart, alen));
+            _pageStart = (_buffer.Length, _attrs.Length);
         }
 
         private void OpenTag(ReadOnlySpan span)
@@ -155,6 +194,11 @@ namespace Sprinkler
                     _commands.Add(cmd);
                     return;
                 }
+            }
+            if (_tag.Name.Equals(Tags.Break))
+            {
+                PageBreak();
+                return;
             }
             if (_tag.Name.Equals(Tags.Speed))
             {

@@ -5,7 +5,7 @@ using UnityEngine.Assertions;
 
 namespace Sprinkler
 {
-    public class ExpandableArray<T> where T : struct
+    public partial class ExpandableArray<T> where T : struct
     {
         private T[] _array;
         private int _length;
@@ -57,12 +57,11 @@ namespace Sprinkler
                 Assert.IsTrue(idx < _length);
                 return ref _array[idx];
             }
-            //set
-            //{
-            //    Assert.IsTrue(0 <= idx);
-            //    Assert.IsTrue(idx < _length);
-            //    ref _array[idx] = value;
-            //}
+        }
+
+        public Span Slice(int start, int length)
+        {
+            return new Span(this, start, length);
         }
     }
 

@@ -1,7 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-
 namespace Sprinkler
 {
     public static class Tags
@@ -12,5 +8,6 @@ namespace Sprinkler
         public static readonly string Quake = "quake";
         public static readonly string Shout = "shout";
         public static readonly string Fade = "fade";
+        public static readonly string Break = "break";
     }
 }
