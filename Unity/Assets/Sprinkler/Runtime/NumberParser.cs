@@ -76,28 +76,28 @@ namespace Sprinkler
                 if (!char.IsDigit(c))
                 {
                     hasPoint = c == '.';
-                    end = i - 1;
+                    end = i;
                     break;
                 }
             }
-            if (end < 0) end = span.Length - 1;
-            FloatValue = ParseSpan(span.Slice(start, end));
+            if (end < 0) end = span.Length;
+            FloatValue = ParseSpan(span.Slice(start, end - start));
 
             if (hasPoint)
             {
-                start = end + 2;
+                start = end + 1;
                 end = -1;
                 for (int i = start; i < span.Length; ++i)
                 {
                     var c = span[i];
                     if (!char.IsDigit(c))
                     {
-                        end = i - 1;
+                        end = i;
                         break;
                     }
                 }
-                if (end < 0) end = span.Length - 1;
-                var r = span.Slice(start, end);
+                if (end < 0) end = span.Length;
+                var r = span.Slice(start, end - start);
                 float m = 1.0f;
                 for (int j = 0; j < r.Length; ++j) m *= 10.0f;
                 FloatValue += (float)ParseSpan(r) * (1.0f/m);

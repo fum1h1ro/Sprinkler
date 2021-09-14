@@ -30,22 +30,22 @@ namespace Sprinkler
             public Enumerator(string src)
             {
                 _src = src;
-                _start = _end = -1;
+                _start = _end = 0;
             }
 
             public void Dispose() {}
 
-            public ReadOnlySpan Current => new ReadOnlySpan(_src, _start, _end);
+            public ReadOnlySpan Current => new ReadOnlySpan(_src, _start, _end - _start);
             object IEnumerator.Current => Current;
 
             public void Reset()
             {
-                _start = _end = -1;
+                _start = _end = 0;
             }
 
             public bool MoveNext()
             {
-                _start = _end + 1;
+                _start = _end;
                 _end = -1;
                 if (_start >= _src.Length) return false;
 
@@ -57,16 +57,16 @@ namespace Sprinkler
 
                     if (!isTag && c == TextProcessor.TagStartChar)
                     {
-                        _end = i - 1;
+                        _end = i;
                         break;
                     }
                     if (isTag && c == TextProcessor.TagEndChar)
                     {
-                        _end = i;
+                        _end = i + 1;
                         break;
                     }
                 }
-                if (_end < 0) _end = _src.Length - 1;
+                if (_end < 0) _end = _src.Length;
 
                 return true;
             }

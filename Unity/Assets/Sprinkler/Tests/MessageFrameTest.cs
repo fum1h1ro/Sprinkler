@@ -37,6 +37,11 @@ namespace Sprinkler.Tests
         public void CountTest(string str, int count)
         {
             Assert.AreEqual((new Lexer(str)).Count(), count);
+            foreach (var l in new Lexer(str))
+            {
+                Debug.Log(l.ToString());
+            }
+
         }
     }
 }

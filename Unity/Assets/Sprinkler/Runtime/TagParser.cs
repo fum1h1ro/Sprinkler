@@ -11,7 +11,7 @@ namespace Sprinkler
         public ReadOnlySpan Name { get; private set; }
         public ReadOnlySpan Value { get; private set; }
 
-        public void Parse(string s) => Parse(new ReadOnlySpan(s, 0, s.Length - 1));
+        public void Parse(string s) => Parse(new ReadOnlySpan(s, 0, s.Length));
 
         public void Parse(ReadOnlySpan src)
         {
@@ -43,7 +43,7 @@ namespace Sprinkler
 
                 if (keyE < 0)
                 {
-                    if (!char.IsLetter(c)) keyE = i - 1;
+                    if (!char.IsLetter(c)) keyE = i;
                     if (c == '=')
                     {
                         HasValue = true;
@@ -54,21 +54,15 @@ namespace Sprinkler
                 valS = i;
                 break;
             }
-            if (keyE < 0) keyE = span.Length - 2;
+            if (keyE < 0) keyE = span.Length - 1;
 
-            Name = span.Slice(keyS, keyE);
+            Name = span.Slice(keyS, keyE - keyS);
 
             if (!HasValue || valS < 0) return;
 
-            for (int i = span.Length - 2; i >= valS; --i)
-            {
-                var c = span[i];
-                if (char.IsWhiteSpace(c)) continue;
-                valE = i;
-                break;
-            }
+            valE = span.Length - 1;
 
-            Value = span.Slice(valS, valE);
+            Value = span.Slice(valS, valE - valS).Trim();
         }
     }
 }

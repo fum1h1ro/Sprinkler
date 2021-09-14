@@ -67,7 +67,8 @@ namespace Sprinkler
         }
 
         private readonly TMP_Text _text;
-        private TextEffects.TypeFlag _currentFlag;
+        //private TextEffects.TypeFlag _currentFlag;
+        private CharAttribute _currentAttr;
         private TagParser _tag = new TagParser();
         private ExpandableArray<Command> _commands = new ExpandableArray<Command>(128);
         private ExpandableCharArray _buffer = new ExpandableCharArray(128);
@@ -109,7 +110,8 @@ namespace Sprinkler
             _buffer.Add(c);
             if (isVisible)
             {
-                _attrs.Add(new CharAttribute{ AnimType = _currentFlag, Time = 0.0f });
+                //_attrs.Add(new CharAttribute{ AnimType = _currentFlag, Time = 0.0f });
+                _attrs.Add(_currentAttr);
             }
         }
 
@@ -124,14 +126,13 @@ namespace Sprinkler
             _commands.Clear();
             _buffer.Clear();
             _attrs.Clear();
-            _currentFlag = 0;
+            _currentAttr = new CharAttribute();
             _openedTags.Clear();
             _pageStart = (0, 0);
             _pages.Clear();
 
             foreach (var span in lex)
             {
-                //Debug.Log($"{span.ToString()}");
                 if (span[0] == TagStartChar)
                 {
                     _tag.Parse(span);
@@ -158,11 +159,11 @@ namespace Sprinkler
             }
 
             PageBreak();
-            Debug.Log($"{_pages.Count}");
-            foreach (var p in _pages)
-            {
-                Debug.Log($"{p.Start} {p.Length} {p.AttrStart} {p.AttrLength}");
-            }
+            //Debug.Log($"{_pages.Count}");
+            //foreach (var p in _pages)
+            //{
+            //    Debug.Log($"{p.Start} {p.Length} {p.AttrStart} {p.AttrLength}");
+            //}
         }
 
         private void PageBreak()
@@ -215,7 +216,7 @@ namespace Sprinkler
             if (_tag.Name.Equals(Tags.Ruby))
             {
                 Assert.IsFalse(_openedTags.ContainsKey(Tags.Ruby));
-                _openedTags[Tags.Ruby] = new TagParam{ Value = _tag.Value, Start = span.End + 1 };
+                _openedTags[Tags.Ruby] = new TagParam{ Value = _tag.Value, Start = span.End };
                 return;
             }
 
@@ -238,7 +239,8 @@ namespace Sprinkler
                 Assert.IsTrue(_openedTags.ContainsKey(Tags.Ruby));
                 // @todo string...
                 var ruby = _openedTags[Tags.Ruby].Value.ToString();
-                var body = (new ReadOnlySpan(src, _openedTags[Tags.Ruby].Start, span.Start - 1)).ToString();
+                var tagStart = _openedTags[Tags.Ruby].Start;
+                var body = (new ReadOnlySpan(src, tagStart, span.Start - tagStart)).ToString();
                 var rubySize = _text.GetPreferredValues($"<size=50%>{ruby}</size>");
                 var bodySize = _text.GetPreferredValues(body);
 
@@ -277,18 +279,50 @@ namespace Sprinkler
         {
             if (isOpen)
             {
-                Assert.IsTrue((_currentFlag & flag) == 0);
-                _currentFlag |= flag;
+                Assert.IsTrue((_currentAttr.AnimType & flag) == 0);
+                _currentAttr.AnimType |= flag;
             }
             else
             {
-                Assert.IsTrue((_currentFlag & flag) != 0);
-                _currentFlag &= ~flag;
+                Assert.IsTrue((_currentAttr.AnimType & flag) != 0);
+                _currentAttr.AnimType &= ~flag;
             }
         }
 
         private void TagQuake(bool isOpen, ReadOnlySpan span) => EffectTag(isOpen, TextEffects.TypeFlag.Quake);
-        private void TagShout(bool isOpen, ReadOnlySpan span) => EffectTag(isOpen, TextEffects.TypeFlag.Shout);
+        private void TagShout(bool isOpen, ReadOnlySpan span)
+        {
+            if (isOpen)
+            {
+                var values = new TextSplitter(_tag.Value.ToString(), ',');
+                var count = values.Count();
+                Assert.IsTrue(0 <= count && count <= 3);
+
+                if (count == 3)
+                {
+                    _currentAttr.Shout.Scale = (short)(256 * NumberParser.Parse(values[0]));
+                    _currentAttr.Shout.GrowSpeed = (short)(256 * NumberParser.Parse(values[1]));
+                    _currentAttr.Shout.ShrinkSpeed = (short)(256 * NumberParser.Parse(values[2]));
+                }
+                else if (count == 2)
+                {
+                    _currentAttr.Shout.Scale = (short)(256 * NumberParser.Parse(values[0]));
+                    _currentAttr.Shout.GrowSpeed = _currentAttr.Shout.ShrinkSpeed = (short)(256 * NumberParser.Parse(values[1]) * 0.5f);
+                }
+                else if (count == 1)
+                {
+                    _currentAttr.Shout.Scale = (short)(256 * NumberParser.Parse(values[0]));
+                    _currentAttr.Shout.GrowSpeed = _currentAttr.Shout.ShrinkSpeed = (short)(256 * 0.125f);
+                }
+                else
+                {
+                    _currentAttr.Shout.Scale = (short)(256 * 1.25f);
+                    _currentAttr.Shout.GrowSpeed = _currentAttr.Shout.ShrinkSpeed = (short)(256 * 0.125f);
+                }
+            }
+
+            EffectTag(isOpen, TextEffects.TypeFlag.Shout);
+        }
         private void TagFade(bool isOpen, ReadOnlySpan span) => EffectTag(isOpen, TextEffects.TypeFlag.Fade);
     }
 }

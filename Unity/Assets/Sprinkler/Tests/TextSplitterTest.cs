@@ -19,5 +19,32 @@ namespace Sprinkler.Tests
         {
             Assert.AreEqual((new TextSplitter(str, ' ')).Count(), count);
         }
+
+        [TestCase("hoge", 0, "hoge")]
+        [TestCase("hoge hage", 1, "hage")]
+        public void IndexTest(string str, int index, string result)
+        {
+            Assert.AreEqual((new TextSplitter(str, ' '))[index], result);
+        }
+
+        [TestCase("hoge", 0, "hoge")]
+        [TestCase("0,1", 1, "1")]
+        public void IndexTest2(string str, int index, string result)
+        {
+            Assert.AreEqual((new TextSplitter(str, ','))[index], result);
+        }
+
+        [TestCase("0,1")]
+        public void ForEachTest(string str)
+        {
+            var ts = new TextSplitter(str, ',');
+            foreach (var v in ts)
+            {
+                Debug.Log(v.ToString());
+            }
+        }
+
+
+
     }
 }

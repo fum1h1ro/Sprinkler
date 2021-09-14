@@ -23,46 +23,48 @@ namespace Sprinkler
         {
             _ref = r;
             _start = 0;
-            _end = r.Length - 1;
+            _end = r.Length;
         }
 
-        public ReadOnlySpan(string r, int s, int e)
+        public ReadOnlySpan(string r, int s, int len)
         {
             Assert.IsNotNull(r);
             Assert.IsTrue(0 <= s);
-            Assert.IsTrue(0 <= e);
-            Assert.IsTrue(s <= e);
+            //Assert.IsTrue(0 <= e);
+            //Assert.IsTrue(s <= e);
 
             _ref = r;
             _start = s;
-            _end = e;
+            _end = s + len;
         }
 
         public int Start => _start;
         public int End => _end;
-        public int Length => _end - _start + 1;
+        public int Length => _end - _start;
 
         public char this[int idx]
         {
             get
             {
                 Assert.IsTrue(0 <= idx);
-                Assert.IsTrue(_start + idx <= _end);
+                Assert.IsTrue(_start + idx < _end);
                 return _ref[_start + idx];
             }
         }
 
         public new string ToString()
         {
-            if (_ref == null) return "";
+            if (_ref == null || string.IsNullOrEmpty(_ref)) return "";
             return _ref.Substring(_start, Length);
         }
 
         [System.Diagnostics.Contracts.Pure]
-        public ReadOnlySpan Slice(int s, int e) => new ReadOnlySpan(_ref, _start + s, _start + e);
+        public ReadOnlySpan Slice(int s, int len) => new ReadOnlySpan(_ref, _start + s, len);
 
         public ReadOnlySpan Trim()
         {
+            if (Length == 0) return this;
+
             int start = -1;
             int end = -1;
 
@@ -78,11 +80,11 @@ namespace Sprinkler
             {
                 var c = this[i];
                 if (char.IsWhiteSpace(c)) continue;
-                end = i;
+                end = i + 1;
                 break;
             }
 
-            return Slice(start, end);
+            return Slice(start, end - start);
         }
 
         public struct Enumerator : IEnumerator<char>

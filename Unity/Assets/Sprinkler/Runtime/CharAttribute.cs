@@ -16,6 +16,9 @@ namespace Sprinkler
 
         public struct ShoutParam
         {
+            public short Scale;
+            public short GrowSpeed;
+            public short ShrinkSpeed;
         }
 
         public struct FadeParam

@@ -974,7 +974,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Plus: {fileID: 264335863}
   Player: {fileID: 264335862}
-  Text: AAAABBBB<break>11112222
+  Text: <shout=1,0>1234567890</shout>
 --- !u!114 &1995317242
 MonoBehaviour:
   m_ObjectHideFlags: 0

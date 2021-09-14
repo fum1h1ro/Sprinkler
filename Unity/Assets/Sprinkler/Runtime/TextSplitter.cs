@@ -30,6 +30,20 @@ namespace Sprinkler
             return count;
         }
 
+        public ReadOnlySpan this[int idx]
+        {
+            get
+            {
+                int count = 0;
+                foreach (var v in this)
+                {
+                    //Debug.Log($"{v.ToString()}");
+                    if (count++ == idx) return v;
+                }
+                return ReadOnlySpan.Empty;
+            }
+        }
+
         public struct Enumerator : IEnumerator<ReadOnlySpan>
         {
             private readonly ReadOnlySpan _src;
@@ -46,7 +60,7 @@ namespace Sprinkler
 
             public void Dispose() {}
 
-            public ReadOnlySpan Current => _src.Slice(_start, _end);
+            public ReadOnlySpan Current => _src.Slice(_start, _end - _start);
             object IEnumerator.Current => Current;
 
             public void Reset()
@@ -73,10 +87,10 @@ namespace Sprinkler
                 {
                     var c = _src[i];
                     if (c != _sep) continue;
-                    _end = i - 1;
+                    _end = i;
                     break;
                 }
-                if (_end < 0) _end = _src.Length - 1;
+                if (_end < 0) _end = _src.Length;
 
                 return true;
             }
