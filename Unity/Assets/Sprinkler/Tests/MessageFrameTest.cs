@@ -17,8 +17,7 @@ namespace Sprinkler.Tests
         [TestCase("</tag>", "tag", true, false, "")]
         public void Simple(string s, string name, bool isClose, bool hasValue, string value)
         {
-            var tag = new TagParser();
-            tag.Parse(s);
+            var tag = new TagParser(s);
             Assert.AreEqual(name, tag.Name.ToString());
             Assert.AreEqual(isClose, tag.IsCloseTag);
             Assert.AreEqual(hasValue, tag.HasValue);

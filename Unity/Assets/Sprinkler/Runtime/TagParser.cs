@@ -4,16 +4,32 @@ using UnityEngine;
 
 namespace Sprinkler
 {
-    public class TagParser
+    public struct TagParser
     {
         public bool IsCloseTag { get; private set; }
         public bool HasValue { get; private set; }
         public ReadOnlySpan Name { get; private set; }
         public ReadOnlySpan Value { get; private set; }
 
-        public void Parse(string s) => Parse(new ReadOnlySpan(s, 0, s.Length));
+        public TagParser(ReadOnlySpan span)
+        {
+            IsCloseTag = false;
+            HasValue = false;
+            Name = ReadOnlySpan.Empty;
+            Value = ReadOnlySpan.Empty;
+            Parse(span);
+        }
 
-        public void Parse(ReadOnlySpan src)
+        public TagParser(string s)
+        {
+            IsCloseTag = false;
+            HasValue = false;
+            Name = ReadOnlySpan.Empty;
+            Value = ReadOnlySpan.Empty;
+            Parse(new ReadOnlySpan(s, 0, s.Length));
+        }
+
+        private void Parse(ReadOnlySpan src)
         {
             IsCloseTag = false;
             HasValue = false;

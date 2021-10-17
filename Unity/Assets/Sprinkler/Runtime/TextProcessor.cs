@@ -66,15 +66,16 @@ namespace Sprinkler
             public int Start;
         }
 
+        private delegate void TagProc(bool isOpen, ref TagParser tag, ReadOnlySpan span);
+
         private readonly TMP_Text _text;
         //private TextEffects.TypeFlag _currentFlag;
         private CharAttribute _currentAttr;
-        private TagParser _tag = new TagParser();
         private ExpandableArray<Command> _commands = new ExpandableArray<Command>(128);
         private ExpandableCharArray _buffer = new ExpandableCharArray(128);
         private ExpandableArray<CharAttribute> _attrs = new ExpandableArray<CharAttribute>(128);
         private Dictionary<string, TagParam> _openedTags = new Dictionary<string, TagParam>();
-        private Dictionary<ReadOnlySpan, Action<bool, ReadOnlySpan>> _tagProc = new Dictionary<ReadOnlySpan, Action<bool, ReadOnlySpan>>();
+        private Dictionary<ReadOnlySpan, TagProc> _tagProc = new Dictionary<ReadOnlySpan, TagProc>();
         private List<PageSpan> _pages = new List<PageSpan>(8);
         private (int, int) _pageStart;
 
@@ -135,15 +136,15 @@ namespace Sprinkler
             {
                 if (span[0] == TagStartChar)
                 {
-                    _tag.Parse(span);
+                    var tag = new TagParser(span);
 
-                    if (_tag.IsCloseTag)
+                    if (tag.IsCloseTag)
                     {
-                        CloseTag(src, span);
+                        CloseTag(ref tag, src, span);
                     }
                     else
                     {
-                        OpenTag(span);
+                        OpenTag(ref tag, span);
                     }
                 }
                 else if (_openedTags.Keys.Count == 0)
@@ -176,17 +177,17 @@ namespace Sprinkler
             _pageStart = (_buffer.Length, _attrs.Length);
         }
 
-        private void OpenTag(ReadOnlySpan span)
+        private void OpenTag(ref TagParser tag, ReadOnlySpan span)
         {
-            if (_tagProc.ContainsKey(_tag.Name))
+            if (_tagProc.ContainsKey(tag.Name))
             {
-                _tagProc[_tag.Name](true, span);
+                _tagProc[tag.Name](true, ref tag, span);
                 return;
             }
 
-            if (_tag.Name.Equals(Tags.Wait))
+            if (tag.Name.Equals(Tags.Wait))
             {
-                var vals = new TextSplitter(_tag.Value);
+                var vals = new TextSplitter(tag.Value);
                 Assert.AreEqual(vals.Count(), 1);
                 foreach (var e in vals)
                 {
@@ -196,14 +197,14 @@ namespace Sprinkler
                     return;
                 }
             }
-            if (_tag.Name.Equals(Tags.Break))
+            if (tag.Name.Equals(Tags.Break))
             {
                 PageBreak();
                 return;
             }
-            if (_tag.Name.Equals(Tags.Speed))
+            if (tag.Name.Equals(Tags.Speed))
             {
-                var vals = new TextSplitter(_tag.Value);
+                var vals = new TextSplitter(tag.Value);
                 Assert.AreEqual(vals.Count(), 1);
                 foreach (var e in vals)
                 {
@@ -213,10 +214,10 @@ namespace Sprinkler
                     return;
                 }
             }
-            if (_tag.Name.Equals(Tags.Ruby))
+            if (tag.Name.Equals(Tags.Ruby))
             {
                 Assert.IsFalse(_openedTags.ContainsKey(Tags.Ruby));
-                _openedTags[Tags.Ruby] = new TagParam{ Value = _tag.Value, Start = span.End };
+                _openedTags[Tags.Ruby] = new TagParam{ Value = tag.Value, Start = span.End };
                 return;
             }
 
@@ -226,15 +227,15 @@ namespace Sprinkler
             }
         }
 
-        private void CloseTag(string src, ReadOnlySpan span)
+        private void CloseTag(ref TagParser tag, string src, ReadOnlySpan span)
         {
-            if (_tagProc.ContainsKey(_tag.Name))
+            if (_tagProc.ContainsKey(tag.Name))
             {
-                _tagProc[_tag.Name](false, span);
+                _tagProc[tag.Name](false, ref tag, span);
                 return;
             }
 
-            if (_tag.Name.Equals(Tags.Ruby))
+            if (tag.Name.Equals(Tags.Ruby))
             {
                 Assert.IsTrue(_openedTags.ContainsKey(Tags.Ruby));
                 // @todo string...
@@ -289,12 +290,16 @@ namespace Sprinkler
             }
         }
 
-        private void TagQuake(bool isOpen, ReadOnlySpan span) => EffectTag(isOpen, TextEffects.TypeFlag.Quake);
-        private void TagShout(bool isOpen, ReadOnlySpan span)
+        private void TagQuake(bool isOpen, ref TagParser tag, ReadOnlySpan span)
+        {
+            EffectTag(isOpen, TextEffects.TypeFlag.Quake);
+        }
+
+        private void TagShout(bool isOpen, ref TagParser tag, ReadOnlySpan span)
         {
             if (isOpen)
             {
-                var values = new TextSplitter(_tag.Value.ToString(), ',');
+                var values = new TextSplitter(tag.Value, ',');
                 var count = values.Count();
                 Assert.IsTrue(0 <= count && count <= 3);
 
@@ -319,10 +324,11 @@ namespace Sprinkler
                     _currentAttr.Shout.Scale = (short)(256 * 1.25f);
                     _currentAttr.Shout.GrowSpeed = _currentAttr.Shout.ShrinkSpeed = (short)(256 * 0.125f);
                 }
+                Debug.Log($"OPSN SHOUT{_currentAttr}");
             }
 
             EffectTag(isOpen, TextEffects.TypeFlag.Shout);
         }
-        private void TagFade(bool isOpen, ReadOnlySpan span) => EffectTag(isOpen, TextEffects.TypeFlag.Fade);
+        private void TagFade(bool isOpen, ref TagParser tag, ReadOnlySpan span) => EffectTag(isOpen, TextEffects.TypeFlag.Fade);
     }
 }
