@@ -9,12 +9,11 @@ namespace Sprinkler.TextEffects
     {
         public void Modify(in CharAttribute attr, TMP_CharacterInfo info, Vector3[] vtx, int vtxtop)
         {
-            var scale = (float)attr.Shout.Scale / 256.0f - 1.0f;
-            var growSpeed = (float)attr.Shout.GrowSpeed / 256.0f;
-            var shrinkSpeed = (attr.Shout.ShrinkSpeed <= 0)? 1.0f / 256.0f : (float)attr.Shout.ShrinkSpeed / 256.0f;
-            //Debug.Log($"{growSpeed} {shrinkSpeed}");
+            var scale = attr.Shout.Scale.FromFX8() - 1.0f;
+            var growSpeed = attr.Shout.GrowSpeed.FromFX8();
+            var shrinkSpeed = attr.Shout.ShrinkSpeed.FromFX8();
             var total = growSpeed + shrinkSpeed;
-            var t = attr.Time;// * _speed;
+            var t = attr.Time;
             var b = (t <= total)? t / total : 1.0f;
             var w =
                 (t <= growSpeed)? Mathf.Sin((t / growSpeed) * Mathf.PI * 0.5f) :

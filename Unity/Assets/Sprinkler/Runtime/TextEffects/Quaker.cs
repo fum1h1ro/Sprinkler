@@ -20,10 +20,12 @@ namespace Sprinkler.TextEffects
 
         public void Modify(in CharAttribute attr, TMP_CharacterInfo info, Vector3[] vtx, int vtxtop)
         {
+            var h = info.pointSize * attr.Quake.Horizontal.FromFX8();
+            var v = info.pointSize * attr.Quake.Vertical.FromFX8();
+
             var w = Mathf.Sin((attr.Time + attr.Quake.Offset) * _speed) + 0.5f;
-            var o = (w < 0.0f)? Vector3.zero : new Vector3(GetRand(), GetRand(), 0);
-            var sz = info.pointSize * 0.1f;
-            for (var i = 0; i < 4; ++i) vtx[vtxtop+i] += o * sz;
+            var o = (w < 0.0f)? Vector3.zero : new Vector3(GetRand() * h, GetRand() * v, 0);
+            for (var i = 0; i < 4; ++i) vtx[vtxtop+i] += o;
         }
 
         private float GetRand()

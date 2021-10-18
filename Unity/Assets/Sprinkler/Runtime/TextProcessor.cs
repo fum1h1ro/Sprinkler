@@ -293,6 +293,26 @@ namespace Sprinkler
 
         private void TagQuake(bool isOpen, ref TagParser tag, ReadOnlySpan span)
         {
+            if (isOpen)
+            {
+                var values = new TextSplitter(tag.Value, ',');
+                var count = values.Count();
+                Assert.IsTrue(0 <= count && count <= 2);
+
+                if (count == 2)
+                {
+                    _currentAttr.Quake.Horizontal = NumberParser.Parse(values[0]).ToFX8();
+                    _currentAttr.Quake.Vertical = NumberParser.Parse(values[1]).ToFX8();
+                }
+                else if (count == 1)
+                {
+                    _currentAttr.Quake.Horizontal = _currentAttr.Quake.Vertical = NumberParser.Parse(values[0]).ToFX8();
+                }
+                else
+                {
+                    _currentAttr.Quake.Horizontal = _currentAttr.Quake.Vertical = 0.1f.ToFX8();
+                }
+            }
             EffectTag(isOpen, TextEffects.TypeFlag.Quake);
         }
 
@@ -306,29 +326,29 @@ namespace Sprinkler
 
                 if (count == 3)
                 {
-                    _currentAttr.Shout.Scale = (short)(256 * NumberParser.Parse(values[0]));
-                    _currentAttr.Shout.GrowSpeed = (short)(256 * NumberParser.Parse(values[1]));
-                    _currentAttr.Shout.ShrinkSpeed = (short)(256 * NumberParser.Parse(values[2]));
+                    _currentAttr.Shout.Scale = NumberParser.Parse(values[0]).ToFX8();
+                    _currentAttr.Shout.GrowSpeed = NumberParser.Parse(values[1]).ToFX8();
+                    _currentAttr.Shout.ShrinkSpeed = NumberParser.Parse(values[2]).ToFX8();
                 }
                 else if (count == 2)
                 {
-                    _currentAttr.Shout.Scale = (short)(256 * NumberParser.Parse(values[0]));
-                    _currentAttr.Shout.GrowSpeed = _currentAttr.Shout.ShrinkSpeed = (short)(256 * NumberParser.Parse(values[1]) * 0.5f);
+                    _currentAttr.Shout.Scale = NumberParser.Parse(values[0]).ToFX8();
+                    _currentAttr.Shout.GrowSpeed = _currentAttr.Shout.ShrinkSpeed = (NumberParser.Parse(values[1]) * 0.5f).ToFX8();
                 }
                 else if (count == 1)
                 {
-                    _currentAttr.Shout.Scale = (short)(256 * NumberParser.Parse(values[0]));
-                    _currentAttr.Shout.GrowSpeed = _currentAttr.Shout.ShrinkSpeed = (short)(256 * 0.125f);
+                    _currentAttr.Shout.Scale = NumberParser.Parse(values[0]).ToFX8();
+                    _currentAttr.Shout.GrowSpeed = _currentAttr.Shout.ShrinkSpeed = 0.125f.ToFX8();
                 }
                 else
                 {
-                    _currentAttr.Shout.Scale = (short)(256 * 1.25f);
-                    _currentAttr.Shout.GrowSpeed = _currentAttr.Shout.ShrinkSpeed = (short)(256 * 0.125f);
+                    _currentAttr.Shout.Scale = 1.25f.ToFX8();
+                    _currentAttr.Shout.GrowSpeed = _currentAttr.Shout.ShrinkSpeed = 0.125f.ToFX8();
                 }
             }
-
             EffectTag(isOpen, TextEffects.TypeFlag.Shout);
         }
+
         private void TagFade(bool isOpen, ref TagParser tag, ReadOnlySpan span) => EffectTag(isOpen, TextEffects.TypeFlag.Fade);
     }
 }

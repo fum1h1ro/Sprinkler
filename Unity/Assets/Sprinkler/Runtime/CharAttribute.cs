@@ -12,6 +12,8 @@ namespace Sprinkler
         public struct QuakeParam
         {
             public float Offset;
+            public short Horizontal;
+            public short Vertical;
         }
 
         public struct ShoutParam
