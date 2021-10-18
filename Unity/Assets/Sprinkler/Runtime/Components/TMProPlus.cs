@@ -58,7 +58,10 @@ namespace Sprinkler.Components
             _transform = _transform ?? GetComponent<RectTransform>();
             _text = _text ?? (TMP_Text)GetComponent<TextMeshPro>() ?? (TMP_Text)GetComponent<TextMeshProUGUI>();
             _text.richText = true;
+            _text.text = "";
+            _text.ClearMesh();
             _info = _info ?? _text.textInfo;
+            _info.Clear();
             _proc = _proc ?? new TextProcessor(_text);
         }
 
