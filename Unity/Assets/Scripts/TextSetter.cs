@@ -22,7 +22,7 @@ public class TextSetter : MonoBehaviour
             }
             else if (Plus != null)
             {
-                Plus.TaggedText = Text;
+                Plus.SetText(Text);
             }
         });
     }

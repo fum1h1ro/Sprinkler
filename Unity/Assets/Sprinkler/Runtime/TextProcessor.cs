@@ -46,17 +46,21 @@ namespace Sprinkler
 
         public struct PageSpan
         {
-            public int Start;
-            public int Length;
-            public int AttrStart;
-            public int AttrLength;
+            public readonly int Start;
+            public readonly int Length;
+            public readonly int AttrStart;
+            public readonly int AttrLength;
+            public readonly int CommandStart;
+            public readonly int CommandLength;
 
-            public PageSpan(int start, int len, int astart, int alen)
+            public PageSpan(int start, int len, int astart, int alen, int cstart, int clen)
             {
                 Start = start;
                 Length = len;
                 AttrStart = astart;
                 AttrLength = alen;
+                CommandStart = cstart;
+                CommandLength = clen;
             }
         }
 
@@ -77,7 +81,7 @@ namespace Sprinkler
         private Dictionary<string, TagParam> _openedTags = new Dictionary<string, TagParam>();
         private Dictionary<ReadOnlySpan, TagProc> _tagProc = new Dictionary<ReadOnlySpan, TagProc>();
         private List<PageSpan> _pages = new List<PageSpan>(8);
-        private (int, int) _pageStart;
+        private (int BufStart, int AttrStart, int CommandStart) _pageStart;
 
         public int Length => _buffer.Length;
         public char[] ToArray() => _buffer.Array;
@@ -129,7 +133,7 @@ namespace Sprinkler
             _attrs.Clear();
             _currentAttr = new CharAttribute();
             _openedTags.Clear();
-            _pageStart = (0, 0);
+            _pageStart = (0, 0, 0);
             _pages.Clear();
 
             foreach (var span in lex)
@@ -160,21 +164,18 @@ namespace Sprinkler
             }
 
             PageBreak();
-            //Debug.Log($"{_pages.Count}");
-            //foreach (var p in _pages)
-            //{
-            //    Debug.Log($"{p.Start} {p.Length} {p.AttrStart} {p.AttrLength}");
-            //}
         }
 
         private void PageBreak()
         {
-            var start = _pageStart.Item1;
+            var start = _pageStart.BufStart;
             var len = _buffer.Length - start;
-            var astart = _pageStart.Item2;
+            var astart = _pageStart.AttrStart;
             var alen = _attrs.Length - astart;
-            _pages.Add(new PageSpan(start, len, astart, alen));
-            _pageStart = (_buffer.Length, _attrs.Length);
+            var cstart = _pageStart.CommandStart;
+            var clen = _commands.Length - cstart;
+            _pages.Add(new PageSpan(start, len, astart, alen, cstart, clen));
+            _pageStart = (_buffer.Length, _attrs.Length, _commands.Length);
         }
 
         private void OpenTag(ref TagParser tag, ReadOnlySpan span)
@@ -324,7 +325,6 @@ namespace Sprinkler
                     _currentAttr.Shout.Scale = (short)(256 * 1.25f);
                     _currentAttr.Shout.GrowSpeed = _currentAttr.Shout.ShrinkSpeed = (short)(256 * 0.125f);
                 }
-                Debug.Log($"OPSN SHOUT{_currentAttr}");
             }
 
             EffectTag(isOpen, TextEffects.TypeFlag.Shout);

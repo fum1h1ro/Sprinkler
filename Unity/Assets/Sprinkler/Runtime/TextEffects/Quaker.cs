@@ -13,7 +13,7 @@ namespace Sprinkler.TextEffects
         private const int C = 1013904223;
         private const int M = 0x7fffffff;
 
-        public override void Setup(ExpandableArray<CharAttribute> attrs, int idx, int blockIndex)
+        public override void Setup(ExpandableArray<CharAttribute>.Span attrs, int idx, int blockIndex)
         {
             attrs[idx].Quake.Offset = GetRand() * 10.0f;
         }

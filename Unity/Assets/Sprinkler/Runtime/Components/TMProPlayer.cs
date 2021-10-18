@@ -99,8 +99,7 @@ namespace Sprinkler.Components
         public void SetText(string text, bool autoPlay=false)
         {
             Clear();
-            _plus.TaggedText = text;
-            _plus.SetText(text, _pageIndex);
+            _plus.SetText(text);
             _state = State.Paused;
             if (autoPlay) Play();
         }

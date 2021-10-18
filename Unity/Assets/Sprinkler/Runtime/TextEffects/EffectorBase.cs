@@ -7,8 +7,8 @@ namespace Sprinkler.TextEffects
 {
     public class EffectorBase
     {
-        public virtual void Setup(ExpandableArray<CharAttribute> attrs, int idx, int blockIndex) {}
-        public virtual void Update(ExpandableArray<CharAttribute> attrs, int idx) {}
+        public virtual void Setup(ExpandableArray<CharAttribute>.Span attrs, int idx, int blockIndex) {}
+        public virtual void Update(ExpandableArray<CharAttribute>.Span attrs, int idx) {}
     }
 
     public interface IVertexModifier

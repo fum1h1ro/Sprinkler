@@ -13,7 +13,7 @@ namespace Sprinkler.Components
     //[ExecuteInEditMode]
     public class TMProPlus : MonoBehaviour
     {
-        public string TaggedText;
+        //public string TaggedText;
         public bool Rubyable = true;
         public int AdjustFontSizeForLine = 0;
 
@@ -21,11 +21,11 @@ namespace Sprinkler.Components
         private TMP_Text _text;
         private TMP_TextInfo _info;
         private TextProcessor _proc;
-        private string _prevText;
         private bool _rubyable;
         private int _adjustFontSizeForLine;
         private Dictionary<TextEffects.TypeFlag, (EffectorBase Effector, EffectorWork Work)> _effectors;
         private int _currentPageIndex;
+        private ExpandableArray<CharAttribute>.Span _currentAttributes;
         private ExpandableArray<TextProcessor.Command>.Span _currentCommands;
 
         private class EffectorWork
@@ -64,11 +64,6 @@ namespace Sprinkler.Components
 
         private void Update()
         {
-            if (_prevText != TaggedText)
-            {
-                SetText(TaggedText);
-            }
-
             if (_rubyable != Rubyable || _adjustFontSizeForLine != AdjustFontSizeForLine)
             {
                 _rubyable = Rubyable;
@@ -91,40 +86,11 @@ namespace Sprinkler.Components
             _proc.Dispose();
         }
 
-        internal void SetText(string text, int page=-1)
+        public int SetText(string text)
         {
-            try
-            {
-                _proc.SetText(text);
-
-                var currentFlag = (TextEffects.TypeFlag)0;
-                for (var i = 0; i < _proc.Attributes.Length; ++i)
-                {
-                    var charAnimFlag = _proc.Attributes[i].AnimType;
-                    foreach (var effectorFlag in _effectors.Keys)
-                    {
-                        var e = _effectors[effectorFlag];
-                        // first
-                        if ((charAnimFlag & effectorFlag) != 0 && (effectorFlag & currentFlag) == 0)
-                        {
-                            e.Work.Index = 0;
-                            currentFlag |= charAnimFlag;
-                        }
-                        else if ((charAnimFlag & effectorFlag) == 0)
-                        {
-                            currentFlag &= ~charAnimFlag;
-                        }
-                        e.Effector.Setup(_proc.Attributes, i, e.Work.Index++);
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"{e}");
-            }
-
-            SetPageText(page);
-            _prevText = text;
+            _proc.SetText(text);
+            SetPageText(0);
+            return _proc.PageCount;
         }
 
         public void SetPageText(int page=-1)
@@ -134,17 +100,42 @@ namespace Sprinkler.Components
             if (page < 0)
             {
                 _text.SetCharArray(_proc.ToArray(), 0, _proc.Length);
+                _currentAttributes = _proc.Attributes.Slice(0, _proc.Attributes.Length);
                 _currentCommands = _proc.Commands.Slice(0, _proc.Commands.Length);
             }
             else
             {
                 var span = _proc.GetPageSpan(page);
                 _text.SetCharArray(_proc.ToArray(), span.Start, span.Length);
-                _currentCommands = _proc.Commands.Slice(span.Start, span.Length);
+                _currentAttributes = _proc.Attributes.Slice(span.AttrStart, span.AttrLength);
+                _currentCommands = _proc.Commands.Slice(span.CommandStart, span.CommandLength);
+            }
+
+            var currentFlag = (TextEffects.TypeFlag)0;
+            for (var i = 0; i < _currentAttributes.Length; ++i)
+            {
+                var charAnimFlag = _currentAttributes[i].AnimType;
+                foreach (var effectorFlag in _effectors.Keys)
+                {
+                    var e = _effectors[effectorFlag];
+                    // first
+                    if ((charAnimFlag & effectorFlag) != 0 && (effectorFlag & currentFlag) == 0)
+                    {
+                        e.Work.Index = 0;
+                        currentFlag |= charAnimFlag;
+                    }
+                    else if ((charAnimFlag & effectorFlag) == 0)
+                    {
+                        currentFlag &= ~charAnimFlag;
+                    }
+                    e.Effector.Setup(_currentAttributes, i, e.Work.Index++);
+                }
             }
             _text.enabled = bak;
             _text.ForceMeshUpdate();
             _currentPageIndex = page;
+
+            Assert.AreEqual(_info.characterCount, _currentAttributes.Length);
         }
 
         private void AdjustFontSize()
@@ -159,24 +150,23 @@ namespace Sprinkler.Components
 
         private void CharUpdate()
         {
-            var sz = Mathf.Min(_text.maxVisibleCharacters, _info.characterCount);
             var dt = Time.deltaTime;
-            for (int i = 0; i < sz; ++i)
+            for (int i = 0; i < _info.characterCount; ++i)
             {
                 var charInfo = _info.characterInfo[i];
                 if (!charInfo.isVisible) continue;
 
-                var p = _proc.Attributes[i];
+                var p = _currentAttributes[i];
                 p.Time += dt;
-                _proc.Attributes[i] = p;
+                _currentAttributes[i] = p;
 
                 foreach (var effectorFlag in _effectors.Keys)
                 {
-                    var charAnimFlag = _proc.Attributes[i].AnimType;
+                    var charAnimFlag = _currentAttributes[i].AnimType;
                     if ((charAnimFlag & effectorFlag) != 0)
                     {
                         var e = _effectors[effectorFlag];
-                        e.Effector.Update(_proc.Attributes, i);
+                        e.Effector.Update(_currentAttributes, i);
                     }
                 }
             }
@@ -200,17 +190,17 @@ namespace Sprinkler.Components
 
                 foreach (var effectorFlag in _effectors.Keys)
                 {
-                    var charAnimFlag = _proc.Attributes[i].AnimType;
+                    var charAnimFlag = _currentAttributes[i].AnimType;
                     if ((charAnimFlag & effectorFlag) != 0)
                     {
                         var e = _effectors[effectorFlag];
                         if (e.Effector is IVertexModifier v)
                         {
-                            v.Modify(_proc.Attributes[i], charInfo, vertices, vertexIndex);
+                            v.Modify(_currentAttributes[i], charInfo, vertices, vertexIndex);
                         }
                         if (e.Effector is IColorModifier c)
                         {
-                            c.Modify(_proc.Attributes[i], charInfo, colors, vertexIndex);
+                            c.Modify(_currentAttributes[i], charInfo, colors, vertexIndex);
                         }
                     }
                 }
