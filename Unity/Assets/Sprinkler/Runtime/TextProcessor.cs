@@ -9,7 +9,7 @@ using Sprinkler.TextEffects;
 
 namespace Sprinkler
 {
-    public class TextProcessor : IDisposable
+    public class TextProcessor
     {
         public const char TagStartChar = '<';
         public const char TagEndChar = '>';
@@ -19,6 +19,7 @@ namespace Sprinkler
             Put,
             Wait,
             Speed,
+            Callback,
         }
 
         [StructLayout(LayoutKind.Explicit)]
@@ -38,10 +39,15 @@ namespace Sprinkler
             {
                 public float Scale;
             }
+            public struct CallbackParam
+            {
+                public int Index;
+            }
 
             [FieldOffset(4)] public PutParam Put;
             [FieldOffset(4)] public WaitParam Wait;
             [FieldOffset(4)] public SpeedParam Speed;
+            [FieldOffset(4)] public CallbackParam Callback;
         }
 
         public struct PageSpan
@@ -70,71 +76,143 @@ namespace Sprinkler
             public int Start;
         }
 
+        public interface ICustomTag
+        {
+            string TagName { get; }
+            void Process(Result result, ref TagParser tag);
+        }
+
         private delegate void TagProc(bool isOpen, ref TagParser tag, ReadOnlySpan span);
 
+        private static HashSet<ReadOnlySpan> _throughTagSet = new HashSet<ReadOnlySpan>();
+        private static Dictionary<ReadOnlySpan, ICustomTag> _customTags = new Dictionary<ReadOnlySpan, ICustomTag>();
+        private static HashSet<ReadOnlySpan> _callbackTagSet = new HashSet<ReadOnlySpan>();
+
         private readonly TMP_Text _text;
-        //private TextEffects.TypeFlag _currentFlag;
-        private CharAttribute _currentAttr;
-        private ExpandableArray<Command> _commands = new ExpandableArray<Command>(128);
-        private ExpandableCharArray _buffer = new ExpandableCharArray(128);
-        private ExpandableArray<CharAttribute> _attrs = new ExpandableArray<CharAttribute>(128);
         private Dictionary<string, TagParam> _openedTags = new Dictionary<string, TagParam>();
         private Dictionary<ReadOnlySpan, TagProc> _tagProc = new Dictionary<ReadOnlySpan, TagProc>();
-        private List<PageSpan> _pages = new List<PageSpan>(8);
-        private (int BufStart, int AttrStart, int CommandStart) _pageStart;
+        private string _sourceText;
+        private CharAttribute _currentAttr;
 
-        public int Length => _buffer.Length;
-        public char[] ToArray() => _buffer.Array;
-        public ExpandableArray<Command> Commands => _commands;
-        public ExpandableArray<CharAttribute> Attributes => _attrs;
-        public int PageCount => _pages.Count;
-        public PageSpan GetPageSpan(int idx) => _pages[idx];
+
+        public class Result
+        {
+            private CharAttribute _currentAttr;
+            private (int BufStart, int AttrStart, int CommandStart) _pageStart;
+            //
+            private ExpandableArray<Command> _commands = new ExpandableArray<Command>(128);
+            private ExpandableCharArray _buffer = new ExpandableCharArray(128);
+            private ExpandableArray<CharAttribute> _attrs = new ExpandableArray<CharAttribute>(128);
+            private List<PageSpan> _pages = new List<PageSpan>(8);
+            private ExpandableArray<(ReadOnlySpan, ReadOnlySpan)> _callbackParams = new ExpandableArray<(ReadOnlySpan, ReadOnlySpan)>(16);
+
+            public int Length => _buffer.Length;
+            public char[] ToArray() => _buffer.Array;
+            public ExpandableArray<Command> Commands => _commands;
+            public ExpandableArray<CharAttribute> Attributes => _attrs;
+            public ExpandableArray<(ReadOnlySpan, ReadOnlySpan)> CallbackParams => _callbackParams;
+            public int PageCount => _pages.Count;
+            public PageSpan GetPageSpan(int idx) => _pages[idx];
+
+            public Result()
+            {
+                Clear();
+            }
+
+            public void Clear()
+            {
+                _currentAttr = new CharAttribute();
+                _pageStart = (0, 0, 0);
+                //
+                _commands.Clear();
+                _buffer.Clear();
+                _attrs.Clear();
+                _pages.Clear();
+                _callbackParams.Clear();
+            }
+
+            public void SetCurrentAttribute(CharAttribute attr)
+            {
+                _currentAttr = attr;
+            }
+
+            public void AddChar(char c, bool isVisible)
+            {
+                _buffer.Add(c);
+                if (isVisible)
+                {
+                    _attrs.Add(_currentAttr);
+                    var cmd = new Command{ Type = CommandType.Put };
+                    cmd.Put.Count = 1;
+                    _commands.Add(cmd);
+                }
+            }
+
+            public void AddString(string s, bool isVisible)
+            {
+                foreach (var c in s) AddChar(c, isVisible);
+            }
+
+            public void AddCommand(Command cmd)
+            {
+                _commands.Add(cmd);
+            }
+
+            public void PageBreak()
+            {
+                var start = _pageStart.BufStart;
+                var len = _buffer.Length - start;
+                var astart = _pageStart.AttrStart;
+                var alen = _attrs.Length - astart;
+                var cstart = _pageStart.CommandStart;
+                var clen = _commands.Length - cstart;
+                _pages.Add(new PageSpan(start, len, astart, alen, cstart, clen));
+                _pageStart = (_buffer.Length, _attrs.Length, _commands.Length);
+            }
+        }
+
+        static TextProcessor()
+        {
+            AddThroughTag("color");
+        }
+
+        // 何も処理せずそのままTMPに渡されるタグ
+        public static void AddThroughTag(string tag)
+        {
+            _throughTagSet.Add(new ReadOnlySpan(tag));
+        }
+
+        // パース時に特殊処理を挟むタグ
+        public static void AddCustomTag(ICustomTag custom)
+        {
+            var key = new ReadOnlySpan(custom.TagName);
+            Assert.IsFalse(_customTags.ContainsKey(key));
+            _customTags[key] = custom;
+        }
+
+        // 表示時に特殊処理をしたいタグ
+        public static void AddCallbackTag(string tag)
+        {
+            _callbackTagSet.Add(new ReadOnlySpan(tag));
+        }
 
         public TextProcessor(TMP_Text tmptext)
         {
             _text = tmptext;
-
             _tagProc[new ReadOnlySpan(Tags.Quake)] = TagQuake;
             _tagProc[new ReadOnlySpan(Tags.Shout)] = TagShout;
             _tagProc[new ReadOnlySpan(Tags.Fade)] = TagFade;
-
-            SetText(_text.text);
         }
 
-        public void Dispose()
-        {
-        }
-
-        public void SetText(string t)
-        {
-            Parse(t);
-        }
-
-        private void AddChar(char c, bool isVisible)
-        {
-            _buffer.Add(c);
-            if (isVisible)
-            {
-                //_attrs.Add(new CharAttribute{ AnimType = _currentFlag, Time = 0.0f });
-                _attrs.Add(_currentAttr);
-            }
-        }
-
-        private void AddString(string s, bool isVisible)
-        {
-            foreach (var c in s) AddChar(c, isVisible);
-        }
-
-        private void Parse(string src)
+        public void Parse(string src, Result result)
         {
             var lex = new Lexer(src);
-            _commands.Clear();
-            _buffer.Clear();
-            _attrs.Clear();
-            _currentAttr = new CharAttribute();
             _openedTags.Clear();
-            _pageStart = (0, 0, 0);
-            _pages.Clear();
+            _sourceText = src;
+            _currentAttr = new CharAttribute();
+
+            //var result = new Result();
+            result.Clear();
 
             foreach (var span in lex)
             {
@@ -144,48 +222,50 @@ namespace Sprinkler
 
                     if (tag.IsCloseTag)
                     {
-                        CloseTag(ref tag, src, span);
+                        CloseTag(result, ref tag, src, span);
                     }
                     else
                     {
-                        OpenTag(ref tag, span);
+                        OpenTag(result, ref tag, span);
                     }
+
+                    result.SetCurrentAttribute(_currentAttr);
                 }
                 else if (_openedTags.Keys.Count == 0)
                 {
                     for (int i = 0; i < span.Length; ++i)
                     {
-                        var cmd = new Command{ Type = CommandType.Put };
-                        cmd.Put.Count = 1;
-                        _commands.Add(cmd);
-                        AddChar(span[i], true);
+                        result.AddChar(span[i], true);
                     }
                 }
             }
 
-            PageBreak();
+            result.PageBreak();
         }
 
-        private void PageBreak()
+        private void PreventInnerText(ref TagParser tag, ReadOnlySpan span)
         {
-            var start = _pageStart.BufStart;
-            var len = _buffer.Length - start;
-            var astart = _pageStart.AttrStart;
-            var alen = _attrs.Length - astart;
-            var cstart = _pageStart.CommandStart;
-            var clen = _commands.Length - cstart;
-            _pages.Add(new PageSpan(start, len, astart, alen, cstart, clen));
-            _pageStart = (_buffer.Length, _attrs.Length, _commands.Length);
+            _openedTags[tag.Name.ToString()] = new TagParam{ Value = tag.Value, Start = span.End };
         }
 
-        private void OpenTag(ref TagParser tag, ReadOnlySpan span)
+        private ReadOnlySpan GetInnerText(ref TagParser tag, ReadOnlySpan span)
+        {
+            var tagStart = _openedTags[tag.Name.ToString()].Start;
+            return new ReadOnlySpan(_sourceText, tagStart, span.Start - tagStart);
+        }
+
+        private void ApproveInnerText(ref TagParser tag)
+        {
+            _openedTags.Remove(tag.Name.ToString());
+        }
+
+        private void OpenTag(Result result, ref TagParser tag, ReadOnlySpan span)
         {
             if (_tagProc.ContainsKey(tag.Name))
             {
                 _tagProc[tag.Name](true, ref tag, span);
                 return;
             }
-
             if (tag.Name.Equals(Tags.Wait))
             {
                 var vals = new TextSplitter(tag.Value);
@@ -194,13 +274,13 @@ namespace Sprinkler
                 {
                     var cmd = new Command{ Type = CommandType.Wait };
                     cmd.Wait.Second = NumberParser.Parse(e);
-                    _commands.Add(cmd);
+                    result.AddCommand(cmd);
                     return;
                 }
             }
             if (tag.Name.Equals(Tags.Break))
             {
-                PageBreak();
+                result.PageBreak();
                 return;
             }
             if (tag.Name.Equals(Tags.Speed))
@@ -211,31 +291,45 @@ namespace Sprinkler
                 {
                     var cmd = new Command{ Type = CommandType.Speed };
                     cmd.Speed.Scale = 1.0f / NumberParser.Parse(e);
-                    _commands.Add(cmd);
+                    result.AddCommand(cmd);
                     return;
                 }
             }
             if (tag.Name.Equals(Tags.Ruby))
             {
-                Assert.IsFalse(_openedTags.ContainsKey(Tags.Ruby));
-                _openedTags[Tags.Ruby] = new TagParam{ Value = tag.Value, Start = span.End };
+                Assert.AreEqual(_openedTags.Keys.Count, 0);
+                PreventInnerText(ref tag, span);
+                return;
+            }
+            if (_customTags.ContainsKey(tag.Name))
+            {
+                _customTags[tag.Name].Process(result, ref tag);
+                return;
+            }
+            if (_callbackTagSet.Contains(tag.Name))
+            {
+                var cmd = new Command{ Type = CommandType.Callback };
+                cmd.Callback.Index = result.CallbackParams.Length;
+                result.AddCommand(cmd);
+                result.CallbackParams.Add((tag.Name, tag.Value));
+                return;
+            }
+            if (_throughTagSet.Contains(tag.Name))
+            {
+                foreach (var s in span) result.AddChar(s, false);
                 return;
             }
 
-            foreach (var s in span)
-            {
-                AddChar(s, false);
-            }
+            throw new Exception($"invalid tag: {tag.Name.ToString()}\nin: \"{_sourceText}\"");
         }
 
-        private void CloseTag(ref TagParser tag, string src, ReadOnlySpan span)
+        private void CloseTag(Result result, ref TagParser tag, string src, ReadOnlySpan span)
         {
             if (_tagProc.ContainsKey(tag.Name))
             {
                 _tagProc[tag.Name](false, ref tag, span);
                 return;
             }
-
             if (tag.Name.Equals(Tags.Ruby))
             {
                 Assert.IsTrue(_openedTags.ContainsKey(Tags.Ruby));
@@ -249,32 +343,39 @@ namespace Sprinkler
                 var prefix = (bodySize.x < rubySize.x)? (rubySize.x - bodySize.x) * 0.5f : 0;
                 var offset0 = -(bodySize.x + rubySize.x) * 0.5f;
                 var offset1 = (-rubySize.x + bodySize.x) * 0.5f + prefix;
-                AddString($"<space={prefix}>", false);
-                AddString(body, true);
-                AddString($"<space={offset0}><voffset=1em><size=50%>", false);
-                AddString(ruby, true);
-                AddString($"</size></voffset><space={offset1}>", false);
+                result.AddString($"<space={prefix}>", false);
+                result.AddString(body, true);
+                result.AddString($"<space={offset0}><voffset=1em><size=50%>", false);
+                result.AddString(ruby, true);
+                result.AddString($"</size></voffset><space={offset1}>", false);
 
                 for (int i = 0; i < body.Length - 1; ++i)
                 {
                     var cmd = new Command{ Type = CommandType.Put };
                     cmd.Put.Count = 1;
-                    _commands.Add(cmd);
+                    result.AddCommand(cmd);
                 }
                 {
                     var cmd = new Command{ Type = CommandType.Put };
                     cmd.Put.Count = 1 + ruby.Length;
-                    _commands.Add(cmd);
+                    result.AddCommand(cmd);
                 }
 
-                _openedTags.Remove(Tags.Ruby);
+                ApproveInnerText(ref tag);
+                return;
+            }
+            if (_customTags.ContainsKey(tag.Name))
+            {
+                _customTags[tag.Name].Process(result, ref tag);
+                return;
+            }
+            if (_throughTagSet.Contains(tag.Name))
+            {
+                foreach (var s in span) result.AddChar(s, false);
                 return;
             }
 
-            foreach (var s in span)
-            {
-                AddChar(s, false);
-            }
+            throw new Exception($"invalid tag: {tag.Name.ToString()}\nin: \"{_sourceText}\"");
         }
 
         private void EffectTag(bool isOpen, TextEffects.TypeFlag flag)

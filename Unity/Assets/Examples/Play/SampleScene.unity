@@ -290,7 +290,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5b022e640e6864efb9e489e062a42cfa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  TaggedText: aaa<fade>aa<ruby=hoge>aa</ruby>aaaa</fade>bbb<break>2333
   Rubyable: 1
   AdjustFontSizeForLine: 3
 --- !u!114 &264335864
@@ -974,7 +973,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Plus: {fileID: 264335863}
   Player: {fileID: 264335862}
-  Text: <shout=1,0>1234567890</shout>
+  Text: 1234<se=Se/Bound>5678
 --- !u!114 &1995317242
 MonoBehaviour:
   m_ObjectHideFlags: 0

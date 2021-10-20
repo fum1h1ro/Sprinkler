@@ -21,6 +21,7 @@ namespace Sprinkler.Components
         private TMP_Text _text;
         private TMP_TextInfo _info;
         private TextProcessor _proc;
+        private TextProcessor.Result _result;
         private bool _rubyable;
         private int _adjustFontSizeForLine;
         private Dictionary<TextEffects.TypeFlag, (EffectorBase Effector, EffectorWork Work)> _effectors;
@@ -43,7 +44,8 @@ namespace Sprinkler.Components
         public TMP_Text Text => _text;
         public TMP_TextInfo Info => _info;
         public ExpandableArray<TextProcessor.Command>.Span Commands => _currentCommands;
-        public int PageCount => _proc.PageCount;
+        public int PageCount => _result.PageCount;
+        public ExpandableArray<(ReadOnlySpan, ReadOnlySpan)> CallbackParams => _result.CallbackParams;
 
         private void OnEnable()
         {
@@ -63,6 +65,7 @@ namespace Sprinkler.Components
             _info = _info ?? _text.textInfo;
             _info.Clear();
             _proc = _proc ?? new TextProcessor(_text);
+            _result = _result ?? new TextProcessor.Result();
         }
 
         private void Update()
@@ -86,14 +89,13 @@ namespace Sprinkler.Components
 
         private void OnDestroy()
         {
-            _proc.Dispose();
         }
 
         public int SetText(string text)
         {
-            _proc.SetText(text);
+            _proc.Parse(text, _result);
             SetPageText(0);
-            return _proc.PageCount;
+            return _result.PageCount;
         }
 
         public void SetPageText(int page=-1)
@@ -102,16 +104,16 @@ namespace Sprinkler.Components
             if (bak) _text.enabled = false;
             if (page < 0)
             {
-                _text.SetCharArray(_proc.ToArray(), 0, _proc.Length);
-                _currentAttributes = _proc.Attributes.Slice(0, _proc.Attributes.Length);
-                _currentCommands = _proc.Commands.Slice(0, _proc.Commands.Length);
+                _text.SetCharArray(_result.ToArray(), 0, _result.Length);
+                _currentAttributes = _result.Attributes.Slice(0, _result.Attributes.Length);
+                _currentCommands = _result.Commands.Slice(0, _result.Commands.Length);
             }
             else
             {
-                var span = _proc.GetPageSpan(page);
-                _text.SetCharArray(_proc.ToArray(), span.Start, span.Length);
-                _currentAttributes = _proc.Attributes.Slice(span.AttrStart, span.AttrLength);
-                _currentCommands = _proc.Commands.Slice(span.CommandStart, span.CommandLength);
+                var span = _result.GetPageSpan(page);
+                _text.SetCharArray(_result.ToArray(), span.Start, span.Length);
+                _currentAttributes = _result.Attributes.Slice(span.AttrStart, span.AttrLength);
+                _currentCommands = _result.Commands.Slice(span.CommandStart, span.CommandLength);
             }
 
             var currentFlag = (TextEffects.TypeFlag)0;

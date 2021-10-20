@@ -33,12 +33,25 @@ namespace Sprinkler.Components
         private float _time;
         private int _cursor;
         private int _pageIndex;
+        private Dictionary<string, ICallbackTag> _callbacks = new Dictionary<string, ICallbackTag>();
+
+        public interface ICallbackTag
+        {
+            string TagName { get; }
+            void Callback(string value);
+        }
 
         public static TMProPlayer GetOrAdd(GameObject g)
         {
             var mf = g.GetComponent<TMProPlayer>();
             if (mf == null) mf = g.AddComponent<TMProPlayer>();
             return mf;
+        }
+
+        public void AddCallback(ICallbackTag cb)
+        {
+            Assert.IsFalse(_callbacks.ContainsKey(cb.TagName));
+            _callbacks[cb.TagName] = cb;
         }
 
         private void Awake()
@@ -71,10 +84,9 @@ namespace Sprinkler.Components
                 _time += Time.deltaTime;
                 return;
             }
-            _time = 0.0f;
 
             var cmd = _plus.Commands[_cursor++];
-
+            var noWait = false;
             switch (cmd.Type)
             {
             case TextProcessor.CommandType.Put:
@@ -87,7 +99,21 @@ namespace Sprinkler.Components
             case TextProcessor.CommandType.Speed:
                 _waitScale = cmd.Speed.Scale;
                 break;
+            case TextProcessor.CommandType.Callback:
+                var param = _plus.CallbackParams[cmd.Callback.Index];
+                var key = param.Item1.ToString();
+                if (_callbacks.ContainsKey(key))
+                {
+                    _callbacks[key].Callback(param.Item2.ToString());
+                }
+                else
+                {
+                    throw new Exception($"unknown callback tag: {key}");
+                }
+                noWait = true;
+                break;
             }
+            if (!noWait) _time = 0.0f;
         }
 
         public bool IsStreaming => (IsPlaying || IsPaused) && !IsFinished;
