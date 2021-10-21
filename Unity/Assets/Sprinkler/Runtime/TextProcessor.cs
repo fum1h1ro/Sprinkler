@@ -78,7 +78,6 @@ namespace Sprinkler
 
         public interface ICustomReplaceTagProcessor
         {
-            string TagName { get; }
             void Process(Result result, ref TagParser tag);
         }
 
