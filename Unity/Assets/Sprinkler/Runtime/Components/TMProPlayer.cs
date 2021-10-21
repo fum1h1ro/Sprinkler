@@ -66,54 +66,61 @@ namespace Sprinkler.Components
 
         private void StreamUpdate()
         {
-            if (_cursor >= _plus.Commands.Length)
+            var goNext = false;
+            while (!goNext)
             {
-                if ((_pageIndex + 1) < _plus.PageCount)
+                if (_cursor >= _plus.Commands.Length)
                 {
-                    _state = State.Waiting;
+                    if ((_pageIndex + 1) < _plus.PageCount)
+                    {
+                        _state = State.Waiting;
+                    }
+                    else
+                    {
+                        _state = State.Finished;
+                    }
+                    return;
                 }
-                else
+
+                if (_time < _wait * _waitScale)
                 {
-                    _state = State.Finished;
+                    _time += Time.deltaTime;
+                    return;
                 }
-                return;
+
+                var cmd = _plus.Commands[_cursor++];
+
+                switch (cmd.Type)
+                {
+                case TextProcessor.CommandType.Put:
+                    _plus.Text.maxVisibleCharacters += cmd.Put.Count;
+                    _wait = _defaultWait;
+                    goNext = true;
+                    break;
+                case TextProcessor.CommandType.Wait:
+                    _wait = cmd.Wait.Second;
+                    goNext = true;
+                    break;
+                case TextProcessor.CommandType.Speed:
+                    _waitScale = cmd.Speed.Scale;
+                    goNext = true;
+                    break;
+                case TextProcessor.CommandType.Callback:
+                    var param = _plus.CallbackParams[cmd.Callback.Index];
+                    var key = param.Item1.ToString();
+                    if (_callbacks.ContainsKey(key))
+                    {
+                        _callbacks[key].Callback(param.Item2.ToString());
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"{nameof(TMProPlayer)}: unknown callback tag: {key}");
+                    }
+                    break;
+                }
             }
 
-            if (_time < _wait * _waitScale)
-            {
-                _time += Time.deltaTime;
-                return;
-            }
-
-            var cmd = _plus.Commands[_cursor++];
-            var noWait = false;
-            switch (cmd.Type)
-            {
-            case TextProcessor.CommandType.Put:
-                _plus.Text.maxVisibleCharacters += cmd.Put.Count;
-                _wait = _defaultWait;
-                break;
-            case TextProcessor.CommandType.Wait:
-                _wait = cmd.Wait.Second;
-                break;
-            case TextProcessor.CommandType.Speed:
-                _waitScale = cmd.Speed.Scale;
-                break;
-            case TextProcessor.CommandType.Callback:
-                var param = _plus.CallbackParams[cmd.Callback.Index];
-                var key = param.Item1.ToString();
-                if (_callbacks.ContainsKey(key))
-                {
-                    _callbacks[key].Callback(param.Item2.ToString());
-                }
-                else
-                {
-                    throw new Exception($"unknown callback tag: {key}");
-                }
-                noWait = true;
-                break;
-            }
-            if (!noWait) _time = 0.0f;
+            _time = 0.0f;
         }
 
         public bool IsStreaming => (IsPlaying || IsPaused) && !IsFinished;
