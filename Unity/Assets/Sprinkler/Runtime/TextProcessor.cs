@@ -76,7 +76,7 @@ namespace Sprinkler
             public int Start;
         }
 
-        public interface ICustomTag
+        public interface ICustomReplaceTagProcessor
         {
             string TagName { get; }
             void Process(Result result, ref TagParser tag);
@@ -84,9 +84,9 @@ namespace Sprinkler
 
         private delegate void TagProc(bool isOpen, ref TagParser tag, ReadOnlySpan span);
 
-        private static HashSet<ReadOnlySpan> _throughTagSet = new HashSet<ReadOnlySpan>();
-        private static Dictionary<ReadOnlySpan, ICustomTag> _customTags = new Dictionary<ReadOnlySpan, ICustomTag>();
-        private static HashSet<ReadOnlySpan> _callbackTagSet = new HashSet<ReadOnlySpan>();
+        private static HashSet<ReadOnlySpan> _customThroughTags = new HashSet<ReadOnlySpan>();
+        private static Dictionary<ReadOnlySpan, ICustomReplaceTagProcessor> _customReplaceTags = new Dictionary<ReadOnlySpan, ICustomReplaceTagProcessor>();
+        private static HashSet<ReadOnlySpan> _customCallbackTags = new HashSet<ReadOnlySpan>();
 
         private readonly TMP_Text _text;
         private Dictionary<string, TagParam> _openedTags = new Dictionary<string, TagParam>();
@@ -173,27 +173,27 @@ namespace Sprinkler
 
         static TextProcessor()
         {
-            AddThroughTag("color");
+            AddCustomThroughTag("color");
         }
 
         // 何も処理せずそのままTMPに渡されるタグ
-        public static void AddThroughTag(string tag)
+        public static void AddCustomThroughTag(string tag)
         {
-            _throughTagSet.Add(new ReadOnlySpan(tag));
+            _customThroughTags.Add(new ReadOnlySpan(tag));
         }
 
         // パース時に特殊処理を挟むタグ
-        public static void AddCustomTag(ICustomTag custom)
+        public static void AddCustomReplaceTag(string tag, ICustomReplaceTagProcessor custom)
         {
-            var key = new ReadOnlySpan(custom.TagName);
-            Assert.IsFalse(_customTags.ContainsKey(key));
-            _customTags[key] = custom;
+            var key = new ReadOnlySpan(tag);
+            Assert.IsFalse(_customReplaceTags.ContainsKey(key));
+            _customReplaceTags[key] = custom;
         }
 
         // 表示時に特殊処理をしたいタグ
-        public static void AddCallbackTag(string tag)
+        public static void AddCustomCallbackTag(string tag)
         {
-            _callbackTagSet.Add(new ReadOnlySpan(tag));
+            _customCallbackTags.Add(new ReadOnlySpan(tag));
         }
 
         public TextProcessor(TMP_Text tmptext)
@@ -301,12 +301,12 @@ namespace Sprinkler
                 PreventInnerText(ref tag, span);
                 return;
             }
-            if (_customTags.ContainsKey(tag.Name))
+            if (_customReplaceTags.ContainsKey(tag.Name))
             {
-                _customTags[tag.Name].Process(result, ref tag);
+                _customReplaceTags[tag.Name].Process(result, ref tag);
                 return;
             }
-            if (_callbackTagSet.Contains(tag.Name))
+            if (_customCallbackTags.Contains(tag.Name))
             {
                 var cmd = new Command{ Type = CommandType.Callback };
                 cmd.Callback.Index = result.CallbackParams.Length;
@@ -314,7 +314,7 @@ namespace Sprinkler
                 result.CallbackParams.Add((tag.Name, tag.Value));
                 return;
             }
-            if (_throughTagSet.Contains(tag.Name))
+            if (_customThroughTags.Contains(tag.Name))
             {
                 foreach (var s in span) result.AddChar(s, false);
                 return;
@@ -364,12 +364,12 @@ namespace Sprinkler
                 ApproveInnerText(ref tag);
                 return;
             }
-            if (_customTags.ContainsKey(tag.Name))
+            if (_customReplaceTags.ContainsKey(tag.Name))
             {
-                _customTags[tag.Name].Process(result, ref tag);
+                _customReplaceTags[tag.Name].Process(result, ref tag);
                 return;
             }
-            if (_throughTagSet.Contains(tag.Name))
+            if (_customThroughTags.Contains(tag.Name))
             {
                 foreach (var s in span) result.AddChar(s, false);
                 return;
