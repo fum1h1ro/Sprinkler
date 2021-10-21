@@ -37,7 +37,6 @@ namespace Sprinkler.Components
 
         public interface ICallbackTag
         {
-            string TagName { get; }
             void Callback(string value);
         }
 
@@ -48,10 +47,10 @@ namespace Sprinkler.Components
             return mf;
         }
 
-        public void AddCallback(ICallbackTag cb)
+        public void AddCallback(string tag, ICallbackTag cb)
         {
-            Assert.IsFalse(_callbacks.ContainsKey(cb.TagName));
-            _callbacks[cb.TagName] = cb;
+            Assert.IsFalse(_callbacks.ContainsKey(tag));
+            _callbacks[tag] = cb;
         }
 
         private void Awake()
