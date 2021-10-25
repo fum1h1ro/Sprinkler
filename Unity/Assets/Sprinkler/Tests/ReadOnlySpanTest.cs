@@ -38,5 +38,35 @@ namespace Sprinkler.Tests
         {
             Assert.AreEqual((new ReadOnlySpan(str)).Trim().ToString(), answer);
         }
+
+        [TestCase("hoge", "ho", true)]
+        [TestCase("hoge", "ge", true)]
+        [TestCase("hogehage", "ha", true)]
+        [TestCase("hogehage", "hi", false)]
+        [TestCase("hoge", "hogehage", false)]
+        public void ContainsTest(string src, string search, bool answer)
+        {
+            Assert.AreEqual((new ReadOnlySpan(src)).Contains(search), answer);
+        }
+
+        [TestCase("hoge", 'h', 0)]
+        [TestCase("hoge", 'o', 1)]
+        [TestCase("hogehage", 'g', 2)]
+        [TestCase("hogehage", 'e', 3)]
+        [TestCase("hoge", '2', -1)]
+        public void IndexOfCharTest(string src, char c, int answer)
+        {
+            Assert.AreEqual((new ReadOnlySpan(src)).IndexOf(c), answer);
+        }
+
+        [TestCase("hoge", "ho", 0)]
+        [TestCase("hoge", "ge", 2)]
+        [TestCase("hogehage", "ha", 4)]
+        [TestCase("hogehage", "hi", -1)]
+        [TestCase("hoge", "hogehage", -1)]
+        public void IndexOfStringTest(string src, string search, int answer)
+        {
+            Assert.AreEqual((new ReadOnlySpan(src)).IndexOf(search), answer);
+        }
     }
 }

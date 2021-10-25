@@ -155,5 +155,37 @@ namespace Sprinkler
             }
             return c;
         }
+
+        public bool Contains(string value) => IndexOf(value) >= 0;
+
+        public int IndexOf(char c)
+        {
+            for (var i = 0; i < Length; ++i)
+            {
+                if (this[i] == c) return i;
+            }
+            return -1;
+        }
+
+        public int IndexOf(string value)
+        {
+            for (var i = 0; i < Length; ++i)
+            {
+                if (this[i] == value[0])
+                {
+                    bool isSame = true;
+                    for (var j = 1; j < value.Length; ++j)
+                    {
+                        if (i+j >= Length || this[i+j] != value[j])
+                        {
+                            isSame = false;
+                            break;
+                        }
+                    }
+                    if (isSame) return i;
+                }
+            }
+            return -1;
+        }
     }
 }
