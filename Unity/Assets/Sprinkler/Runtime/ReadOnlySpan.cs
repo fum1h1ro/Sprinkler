@@ -156,7 +156,8 @@ namespace Sprinkler
             return c;
         }
 
-        public bool Contains(string value) => IndexOf(value) >= 0;
+        public bool Contains(char c) => IndexOf(c) >= 0;
+        public bool Contains(string s) => IndexOf(s) >= 0;
 
         public int IndexOf(char c)
         {
@@ -167,16 +168,16 @@ namespace Sprinkler
             return -1;
         }
 
-        public int IndexOf(string value)
+        public int IndexOf(string s)
         {
             for (var i = 0; i < Length; ++i)
             {
-                if (this[i] == value[0])
+                if (this[i] == s[0])
                 {
                     bool isSame = true;
-                    for (var j = 1; j < value.Length; ++j)
+                    for (var j = 1; j < s.Length; ++j)
                     {
-                        if (i+j >= Length || this[i+j] != value[j])
+                        if (i+j >= Length || this[i+j] != s[j])
                         {
                             isSame = false;
                             break;
