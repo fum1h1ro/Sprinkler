@@ -33,6 +33,10 @@ namespace Sprinkler.Tests
         [TestCase("HOGE<>HAGE<HIGE>", 4)]
         [TestCase("<>HAGE<HIGE>", 3)]
         [TestCase("<   >HAGE < HIGE >", 3)]
+        [TestCase("{hoge}", 1)]
+        [TestCase("hoge{hoge}hage", 3)]
+        [TestCase("&lt;", 1)]
+        [TestCase("aaa&lt;bbb", 3)]
         public void CountTest(string str, int count)
         {
             Assert.AreEqual((new Lexer(str)).Count(), count);
@@ -40,7 +44,6 @@ namespace Sprinkler.Tests
             {
                 Debug.Log(l.ToString());
             }
-
         }
     }
 }

@@ -13,6 +13,10 @@ namespace Sprinkler
     {
         public const char TagStartChar = '<';
         public const char TagEndChar = '>';
+        public const char SpecialStartChar = '&';
+        public const char SpecialEndChar = ';';
+        public const char VariableStartChar = '{';
+        public const char VariableEndChar = '}';
 
         public enum CommandType
         {
@@ -81,11 +85,17 @@ namespace Sprinkler
             void Process(Result result, ref TagParser tag);
         }
 
+        public interface ICustomVariableProcessor
+        {
+            void Process(Result result, ReadOnlySpan name);
+        }
+
         private delegate void TagProc(bool isOpen, ref TagParser tag, ReadOnlySpan span);
 
         private static HashSet<ReadOnlySpan> _customThroughTags = new HashSet<ReadOnlySpan>();
         private static Dictionary<ReadOnlySpan, ICustomReplaceTagProcessor> _customReplaceTags = new Dictionary<ReadOnlySpan, ICustomReplaceTagProcessor>();
         private static HashSet<ReadOnlySpan> _customCallbackTags = new HashSet<ReadOnlySpan>();
+        private static ICustomVariableProcessor _customVariableProcessor = null;
 
         private readonly TMP_Text _text;
         private Dictionary<string, TagParam> _openedTags = new Dictionary<string, TagParam>();
@@ -195,6 +205,12 @@ namespace Sprinkler
             _customCallbackTags.Add(new ReadOnlySpan(tag));
         }
 
+        // 
+        public static void SetCustomVariableProcessor(ICustomVariableProcessor proc)
+        {
+            _customVariableProcessor = proc;
+        }
+
         public TextProcessor(TMP_Text tmptext)
         {
             _text = tmptext;
@@ -229,6 +245,18 @@ namespace Sprinkler
                     }
 
                     result.SetCurrentAttribute(_currentAttr);
+                }
+                else if (span[0] == SpecialStartChar)
+                {
+                    var c = (new SpecialParser(span)).Result;
+                    result.AddChar(c, true);
+                }
+                else if (span[0] == VariableStartChar)
+                {
+                    if (_customVariableProcessor != null)
+                    {
+                        _customVariableProcessor.Process(result, span.Slice(1, span.Length - 2).Trim());
+                    }
                 }
                 else if (_openedTags.Keys.Count == 0)
                 {

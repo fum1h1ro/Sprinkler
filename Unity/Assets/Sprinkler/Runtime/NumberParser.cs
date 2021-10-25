@@ -24,18 +24,21 @@ namespace Sprinkler
         public bool IsUint => ValueType == Type.Uint;
         public bool IsFloat => ValueType == Type.Float;
 
-        public NumberParser(ReadOnlySpan src)
+        public NumberParser(ReadOnlySpan src, int radix=0)
         {
             var span = src.Trim();
 
             UintValue = 0;
             FloatValue = 0.0f;
 
+            bool isHex = (radix == 16 || span[0] == '#');
+
             // hex
-            if (span[0] == '#')
+            if (isHex)
             {
+                int s = (span[0] == '#')? 1 : 0;
                 uint m = 1;
-                for (int i = span.Length - 1; i >= 1; --i)
+                for (int i = span.Length - 1; i >= s; --i)
                 {
                     var c = span[i];
                     if (char.IsDigit(c))

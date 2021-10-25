@@ -7,6 +7,8 @@ namespace Sprinkler
     // テキストをタグとそれ以外に分ける
     public struct Lexer
     {
+        private static readonly char[] _openChar = new[]{ '{', '<', '&' };
+        private static readonly char[] _closeChar = new[]{ '}', '>', ';' };
         public readonly string Source;
 
         public Lexer(string src)
@@ -49,21 +51,29 @@ namespace Sprinkler
                 _end = -1;
                 if (_start >= _src.Length) return false;
 
-                bool isTag = _src[_start] == TextProcessor.TagStartChar;
+                int openType = Array.IndexOf(_openChar, _src[_start]);
+                bool isTag = openType >= 0;
 
                 for (int i = _start; i < _src.Length; ++i)
                 {
                     var c = _src[i];
 
-                    if (!isTag && c == TextProcessor.TagStartChar)
+                    if (!isTag)
                     {
-                        _end = i;
-                        break;
+                        if (Array.IndexOf(_openChar, c) >= 0)
+                        {
+                            _end = i;
+                            break;
+                        }
                     }
-                    if (isTag && c == TextProcessor.TagEndChar)
+                    else
                     {
-                        _end = i + 1;
-                        break;
+                        int closeType = Array.IndexOf(_closeChar, c);
+                        if (closeType >= 0 && openType == closeType)
+                        {
+                            _end = i + 1;
+                            break;
+                        }
                     }
                 }
                 if (_end < 0) _end = _src.Length;

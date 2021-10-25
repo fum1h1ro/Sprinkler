@@ -973,7 +973,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Plus: {fileID: 264335863}
   Player: {fileID: 264335862}
-  Text: 1234<se=Se/Bound>5678
+  Text: 1234=<$hoge>56
 --- !u!114 &1995317242
 MonoBehaviour:
   m_ObjectHideFlags: 0
