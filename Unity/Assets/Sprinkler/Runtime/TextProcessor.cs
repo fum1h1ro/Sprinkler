@@ -199,7 +199,7 @@ namespace Sprinkler
         public static void AddCustomReplaceTag(string tag, ICustomReplaceTagProcessor custom)
         {
             var key = new ReadOnlySpan(tag);
-            Assert.IsFalse(_customReplaceTags.ContainsKey(key));
+            //Assert.IsFalse(_customReplaceTags.ContainsKey(key));
             _customReplaceTags[key] = custom;
         }
 
