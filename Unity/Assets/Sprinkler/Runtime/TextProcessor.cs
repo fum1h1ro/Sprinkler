@@ -103,6 +103,10 @@ namespace Sprinkler
         private string _sourceText;
         private CharAttribute _currentAttr;
 
+        private Vector2 GetPreferredValues(string text)
+        {
+            return (_text == null)? Vector2.one : _text.GetPreferredValues(text);
+        }
 
         public class Result
         {
@@ -364,8 +368,8 @@ namespace Sprinkler
                 var ruby = _openedTags[Tags.Ruby].Value.ToString();
                 var tagStart = _openedTags[Tags.Ruby].Start;
                 var body = (new ReadOnlySpan(src, tagStart, span.Start - tagStart)).ToString();
-                var rubySize = _text.GetPreferredValues($"<size=50%>{ruby}</size>");
-                var bodySize = _text.GetPreferredValues(body);
+                var rubySize = GetPreferredValues($"<size=50%>{ruby}</size>");
+                var bodySize = GetPreferredValues(body);
 
                 var prefix = (bodySize.x < rubySize.x)? (rubySize.x - bodySize.x) * 0.5f : 0;
                 var offset0 = -(bodySize.x + rubySize.x) * 0.5f;
