@@ -33,9 +33,16 @@ namespace Sprinkler.Components
         private float _time;
         private int _cursor;
         private int _pageIndex;
-        private Dictionary<string, ICallbackTag> _callbacks = new Dictionary<string, ICallbackTag>();
+        private Dictionary<string, ITagCallback> _callbacks = new Dictionary<string, ITagCallback>();
+        private IPutCallback _putCallback;
 
-        public interface ICallbackTag
+        // 文字を表示する度に呼ばれる
+        public interface IPutCallback
+        {
+            void Callback();
+        }
+
+        public interface ITagCallback
         {
             void Callback(string value);
         }
@@ -47,7 +54,12 @@ namespace Sprinkler.Components
             return mf;
         }
 
-        public void AddCallback(string tag, ICallbackTag cb)
+        public void SetPutCallback(IPutCallback cb)
+        {
+            _putCallback = cb;
+        }
+
+        public void AddCallback(string tag, ITagCallback cb)
         {
             Assert.IsFalse(_callbacks.ContainsKey(tag));
             _callbacks[tag] = cb;
@@ -95,6 +107,7 @@ namespace Sprinkler.Components
                     _plus.Text.maxVisibleCharacters += cmd.Put.Count;
                     _wait = _defaultWait;
                     goNext = true;
+                    _putCallback?.Callback();
                     break;
                 case TextProcessor.CommandType.Wait:
                     _wait = cmd.Wait.Second;
