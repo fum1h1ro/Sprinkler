@@ -93,7 +93,9 @@ namespace Sprinkler.Components
                     return;
                 }
 
-                if (_time < _wait * _waitScale)
+                var realWait = _wait * _waitScale;
+
+                if (_time < realWait)
                 {
                     _time += Time.deltaTime;
                     return;
@@ -106,16 +108,13 @@ namespace Sprinkler.Components
                 case TextProcessor.CommandType.Put:
                     _plus.Text.maxVisibleCharacters += cmd.Put.Count;
                     _wait = _defaultWait;
-                    goNext = true;
                     _putCallback?.Callback();
                     break;
                 case TextProcessor.CommandType.Wait:
                     _wait = cmd.Wait.Second;
-                    goNext = true;
                     break;
                 case TextProcessor.CommandType.Speed:
                     _waitScale = cmd.Speed.Scale;
-                    goNext = true;
                     break;
                 case TextProcessor.CommandType.Callback:
                     var param = _plus.CallbackParams[cmd.Callback.Index];
@@ -130,9 +129,14 @@ namespace Sprinkler.Components
                     }
                     break;
                 }
-            }
 
-            _time = 0.0f;
+                _time -= realWait;
+
+                if (_time <= 0.0f)
+                {
+                    goNext = true;
+                }
+            }
         }
 
         public bool IsStreaming => (IsPlaying || IsPaused) && !IsFinished;
