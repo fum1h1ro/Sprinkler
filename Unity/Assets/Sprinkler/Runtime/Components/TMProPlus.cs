@@ -16,6 +16,7 @@ namespace Sprinkler.Components
         //public string TaggedText;
         public bool Rubyable = true;
         public int AdjustFontSizeForLine = 0;
+        public bool VertexModifierEnabled = true;
 
         private RectTransform _transform;
         private TMP_Text _text;
@@ -199,7 +200,7 @@ namespace Sprinkler.Components
                     if ((charAnimFlag & effectorFlag) != 0)
                     {
                         var e = _effectors[effectorFlag];
-                        if (e.Effector is IVertexModifier v)
+                        if (VertexModifierEnabled && e.Effector is IVertexModifier v)
                         {
                             v.Modify(_currentAttributes[i], charInfo, vertices, vertexIndex);
                         }
