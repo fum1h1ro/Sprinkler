@@ -1,8 +1,8 @@
 {
   "name": "dev.fum1h1ro.sprinkler",
   "displayName": "Sprinkler",
-  "version": "0.1.0",
-  "unity": "2020.3",
+  "version": "0.1.1",
+  "unity": "2022.2",
   "description": "Additional feature for TextMeshPro",
   "documentationUrl": "https://github.com/fum1h1ro/Sprinkler",
   "dependencies": {
