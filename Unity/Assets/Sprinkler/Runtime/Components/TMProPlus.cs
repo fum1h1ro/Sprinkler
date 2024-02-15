@@ -64,7 +64,11 @@ namespace Sprinkler.Components
             _text.text = "";
             _text.ClearMesh();
             _info = _info ?? _text.textInfo;
+#if UNITY_2023_1_OR_NEWER
+            _info.ClearAllMeshInfo();
+#else
             _info.Clear();
+#endif
             _proc = _proc ?? new TextProcessor(_text);
             _result = _result ?? new TextProcessor.Result();
         }
