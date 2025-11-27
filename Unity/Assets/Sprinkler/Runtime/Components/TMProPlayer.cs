@@ -27,7 +27,6 @@ namespace Sprinkler.Components
 
         private TMProPlus _plus;
         private State _state;
-        private float _defaultWait;
         private float _waitScale;
         private float _wait;
         private float _time;
@@ -107,7 +106,7 @@ namespace Sprinkler.Components
                 {
                 case TextProcessor.CommandType.Put:
                     _plus.Text.maxVisibleCharacters += cmd.Put.Count;
-                    _wait = _defaultWait;
+                    _wait = Wait;
                     _putCallback?.Callback();
                     break;
                 case TextProcessor.CommandType.Wait:
@@ -166,9 +165,8 @@ namespace Sprinkler.Components
         public void Clear()
         {
             _cursor = 0;
-            _defaultWait = Wait;
             _waitScale = 1.0f;
-            _wait = _defaultWait;
+            _wait = Wait;
             _time = 0.0f;
             _plus.Text.maxVisibleCharacters = 0;
             _state = State.Empty;

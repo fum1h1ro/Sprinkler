@@ -20,7 +20,7 @@ namespace Sprinkler.TextEffects
             var h = info.pointSize * attr.Quake.Horizontal.FromFX8();
             var v = info.pointSize * attr.Quake.Vertical.FromFX8();
 
-            var w = Mathf.Sin((attr.Time + attr.Quake.Offset) * _speed);
+            var w = Mathf.Sin((attr.Time + attr.Quake.Offset) * _speed) + Mathf.Sin(2.0f * (attr.Time + attr.Quake.Offset) * _speed);
             var o = (w < 0.0f)? Vector3.zero : new Vector3(GetRand(5) * h, GetRand(5) * v, 0);
             for (var i = 0; i < 4; ++i) vtx[vtxtop+i] += o;
         }

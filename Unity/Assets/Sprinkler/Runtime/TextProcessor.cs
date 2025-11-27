@@ -442,7 +442,7 @@ namespace Sprinkler
                 }
                 else
                 {
-                    _currentAttr.Quake.Horizontal = _currentAttr.Quake.Vertical = 0.1f.ToFX8();
+                    _currentAttr.Quake.Horizontal = _currentAttr.Quake.Vertical = 0.2f.ToFX8();
                 }
             }
             EffectTag(isOpen, TextEffects.TypeFlag.Quake);
