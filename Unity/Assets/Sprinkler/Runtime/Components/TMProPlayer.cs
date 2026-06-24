@@ -175,9 +175,15 @@ namespace Sprinkler.Components
 
         public void SkipAll()
         {
-            _plus.Text.maxVisibleCharacters = _plus.Info.characterCount;
-            //if (IsPlaying || IsPaused) _state = State.Finished;
-            _cursor = _plus.Commands.Length;
+            while (!IsFinished)
+            {
+                if (IsPaused) Play();
+                if (IsWaiting) NextPage();
+                StreamUpdate();
+            }
+            //_plus.Text.maxVisibleCharacters = _plus.Info.characterCount;
+            ////if (IsPlaying || IsPaused) _state = State.Finished;
+            //_cursor = _plus.Commands.Length;
         }
 
         public void NextPage()
